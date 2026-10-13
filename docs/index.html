@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan Approval Guarantees</title>
+<meta name="description" content="Four boundary tests that ask what approving an OpenTofu plan binds when a second writer reaches the same Kubernetes object, measured on a pinned lab.">
+<style>
+:root {
+  --bg: #fbfaf7; --surface: #ffffff; --text: #1d2125; --muted: #5b636b; --line: #e3e0d9;
+  --accent: #0f6b5c; --accent-soft: #e2f1ee; --bad: #a33b2a; --bad-soft: #f8e6e2; --good: #1d6b3a; --good-soft: #e3f2e8;
+  --code-bg: #f1efe9;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171a; --surface: #1b1f23; --text: #e6e3dd; --muted: #a2a9b0; --line: #2d3238;
+    --accent: #5cc4ae; --accent-soft: #17312c; --bad: #f08a76; --bad-soft: #3a211c; --good: #7fd39b; --good-soft: #1a3324;
+    --code-bg: #22272c;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171a; --surface: #1b1f23; --text: #e6e3dd; --muted: #a2a9b0; --line: #2d3238;
+  --accent: #5cc4ae; --accent-soft: #17312c; --bad: #f08a76; --bad-soft: #3a211c; --good: #7fd39b; --good-soft: #1a3324;
+  --code-bg: #22272c;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+header { border-bottom: 1px solid var(--line); background: var(--surface); }
+header .wrap { padding-top: 56px; padding-bottom: 44px; }
+.kicker { color: var(--accent); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8rem; margin: 0 0 10px; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.01em; }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 46em; margin: 0 0 26px; }
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-block; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; border: 1px solid var(--line); color: var(--text); background: var(--bg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+section { padding: 48px 0 8px; }
+h2 { font-size: 1.5rem; margin: 0 0 14px; letter-spacing: -0.005em; }
+h3 { font-size: 1.05rem; margin: 22px 0 6px; }
+p { margin: 0 0 14px; }
+.muted { color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.card .op { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
+.card .what { color: var(--muted); font-size: 0.95rem; margin: 4px 0 0; }
+blockquote { margin: 14px 0; padding: 10px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+blockquote p { margin: 0; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0; }
+.flow span { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 0.95rem; }
+.flow .arrow { border: none; background: none; padding: 0 2px; color: var(--muted); }
+.table-scroll { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.95rem; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+tbody tr:last-child td { border-bottom: none; }
+td.no { color: var(--bad); background: var(--bad-soft); font-weight: 600; }
+td.yes { color: var(--good); background: var(--good-soft); font-weight: 600; }
+td.tc { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; white-space: nowrap; }
+ol.findings { padding-left: 1.3em; }
+ol.findings li { margin: 0 0 12px; }
+.note { font-size: 0.92rem; color: var(--muted); }
+.evidence li { margin: 0 0 8px; }
+footer { border-top: 1px solid var(--line); margin-top: 56px; padding: 24px 0 40px; color: var(--muted); font-size: 0.9rem; }
+.flow .val { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
+td.ctl { color: var(--muted); font-weight: 600; }
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="kicker">OpenTofu · Flux · Kubernetes · lab</p>
+    <h1>What does plan approval guarantee?</h1>
+    <p class="lede">Approving a plan feels like approving an outcome. This lab follows one ConfigMap field through four
+      boundary tests in which a second writer reaches the same object, and records what the approval was actually
+      bound to. In this pinned setup exactly one of the four was stopped, by the saved plan's stale-plan check, not by
+      the state lock.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/graphsentinel/tofu-plan-approval">Repository</a>
+      <a class="btn" href="https://github.com/graphsentinel/tofu-plan-approval#quickstart">Quickstart</a>
+      <a class="btn" href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence">Evidence</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<section id="setup">
+  <h2>The setup</h2>
+  <p>One object, one field: <code>ConfigMap t27/t27</code>, <code>data.value</code>. OpenTofu keeps its state in the
+    Kubernetes backend with a lease-based lock. A person triggers the OpenTofu CLI; no OpenTofu controller is involved.
+    The second writer is a separate service account with its own token, so the API server's audit log records it as a
+    different user.</p>
+  <div class="flow">
+    <span>start <span class="val">A</span></span><span class="arrow">→</span>
+    <span>approved change <span class="val">B</span></span><span class="arrow">·</span>
+    <span>second writer <span class="val">C</span></span>
+  </div>
+  <p class="muted">Every scenario runs on a fresh k3d cluster. Recorded for each: what the approval was bound to, the
+    planned actions, state serial and lineage, the writes the audit log captured, field managers, final values, and
+    the exit code and rejection reason of every command.</p>
+</section>
+
+<section id="results">
+  <h2>Results</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Test</th><th>What happens</th><th>Result</th><th>Protection engaged</th></tr></thead>
+      <tbody>
+        <tr><td class="tc">TC-01</td><td>Approve a no-op plan; the runner re-plans before applying, after the second writer set <code>C</code></td>
+          <td>reviewed <code>no-op</code>, applied <code>update</code>; the object went <code>C → A</code></td><td class="no">no</td></tr>
+        <tr><td class="tc">TC-02</td><td>Apply the exact saved plan after the object was edited out of band</td>
+          <td>plan file identical; state lineage and serial unchanged by the edit; apply succeeded, <code>C → B</code></td><td class="no">no</td></tr>
+        <tr><td class="tc">TC-03</td><td>A competing apply advances the shared state, then the earlier saved plan is applied</td>
+          <td>plan saved from serial 4, competing apply moves it to 5; rejected with <code>Saved plan is stale</code>; the object keeps <code>C</code></td><td class="yes">yes</td></tr>
+        <tr><td class="tc">TC-04</td><td>Apply the approved plan cleanly, then let Flux reconcile a source that says <code>C</code></td>
+          <td>OpenTofu writes <code>A → B</code>; Flux's service account then writes <code>B → C</code> on the same object</td><td class="no">no</td></tr>
+        <tr><td class="tc">TC-05</td><td>The same paths with no second writer</td>
+          <td><code>A, B, B, B</code>; no write by the second writer or Flux</td><td class="ctl">control</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <blockquote><p><strong>The lock did not stop TC-03.</strong> A lock only arbitrates operations that run at the same
+    time. The competing apply finished before the earlier plan was applied. What refused the plan is the state serial it
+    carries: the state had moved on. In TC-02 the edit went straight to the API and did not touch the state, so neither
+    mechanism had anything to detect.</p></blockquote>
+  <p class="note">The lock itself works: in a separate step of TC-03, before the plan is saved, a second runner is
+    refused with <code>Error acquiring the state lock</code> while another apply holds it.</p>
+</section>
+
+<section id="counting">
+  <h2>Counting writes, not calls</h2>
+  <p>In TC-04 Flux's kustomize-controller made 5 successful API calls on the object in the 120-second window: 4 dry runs
+    (its drift detection; nothing is written) and 1 persisted server-side apply, the only field change it made,
+    <code>B → C</code>. That write happened right after the Kustomization was resumed, before the three requested
+    reconciliations, which found nothing to change. A request body cannot tell a write from a no-op here, because a
+    server-side apply sends the desired value; the checks therefore order the persisted writes by
+    <code>resourceVersion</code> and compare each with the one before it.</p>
+</section>
+
+<section id="limits">
+  <h2>What this does not say</h2>
+  <ul>
+    <li>Not a vulnerability report: no mechanism was bypassed; each did what it is for.</li>
+    <li>Not a general rule: one pinned setup (OpenTofu 1.12.6, hashicorp/kubernetes 2.38.0, Flux 2.9.5, k3s v1.37.0-k3s1).</li>
+    <li>Not shown to be independent of k3s: a repeat on a second distribution has not been run.</li>
+    <li>Nothing about OpenTofu controllers: none was run.</li>
+    <li>Not a comparison of server-side apply options: TC-02 saw no conflict, which depends on how the provider writes.</li>
+  </ul>
+</section>
+
+<section id="run">
+  <h2>Run it</h2>
+  <p>Ubuntu 24.04 or 26.04 with network access for the first install.</p>
+  <pre><code>git clone https://github.com/graphsentinel/tofu-plan-approval.git
+cd tofu-plan-approval
+scripts/platform.sh install      # missing Ubuntu packages; pinned tofu, flux, k3d, kubectl into bin/
+scripts/platform.sh cluster-up   # the lab's k3d cluster and registry
+RUNS=2 scripts/lab.sh all        # build, install, the full experiment twice, checks, summary</code></pre>
+  <p>On a 4-CPU, 8 GB VM one full run (five scenarios, each on a fresh cluster) took about 5 minutes. Without a
+    cluster, <code>scripts/verify.sh --reference</code> re-runs every check that reads a recorded run against the
+    published reference runs. Details are in the <a href="https://github.com/graphsentinel/tofu-plan-approval#how-to">README</a>.</p>
+</section>
+
+<section id="evidence">
+  <h2>Evidence</h2>
+  <ul class="evidence">
+    <li><a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/reference">Reference runs</a> (2026-09-29): two full runs with plans, state
+      snapshots, audit logs and controller logs; identical row by row.</li>
+    <li><a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/e2e-multipass">Clean-VM runs</a> (2026-10-13): Ubuntu 26.04 (5 runs, then 1 after a
+      reinstall) and 24.04 (1 + 1), from zero; all 8 matched the expected 17 check results and 39 measurement rows.</li>
+    <li><a href="https://github.com/graphsentinel/tofu-plan-approval/blob/main/checks/ledger.tsv">Claim ledger</a>: every claim and the script that tests it, with the exit
+      code contract 0 = passed, 1 = false, 77 = could not run (never counted as passed).</li>
+  </ul>
+</section>
+</main>
+<footer>
+  <div class="wrap">
+    <p>Apache License 2.0 · <a href="https://github.com/graphsentinel/tofu-plan-approval">github.com/graphsentinel/tofu-plan-approval</a></p>
+  </div>
+</footer>
+</body>
+</html>
