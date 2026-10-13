@@ -1,0 +1,9 @@
+# Flux's desired state: value = C.
+# In TC-04, Flux reconciles this intent AFTER the apply wrote the approved B.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: t27
+  namespace: t27
+data:
+  value: "C"

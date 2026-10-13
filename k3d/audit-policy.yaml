@@ -1,0 +1,30 @@
+# kube-apiserver audit policy.
+#
+# RequestResponse for the target ConfigMap: without requestObject and
+# responseObject the question "which value was actually written" has no
+# answer, and a mutation without a response body is recorded as UNKNOWN.
+#
+# The policy itself is archived with the evidence.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  # 1. The experiment object: full bodies.
+  - level: RequestResponse
+    namespaces: ["t27"]
+    resources:
+      - group: ""
+        resources: ["configmaps"]
+
+  # 2. State and lock objects: who held and released them, and when.
+  - level: RequestResponse
+    namespaces: ["t27-state"]
+    resources:
+      - group: ""
+        resources: ["secrets"]
+      - group: "coordination.k8s.io"
+        resources: ["leases"]
+
+  # 3. Everything else at Metadata: keeps the actor trail without the noise.
+  - level: Metadata

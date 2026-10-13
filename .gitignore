@@ -1,0 +1,21 @@
+# Downloaded by scripts/platform.sh install (sha256-checked)
+bin/
+
+# Produced by running the lab: keep them local
+runs/
+results/
+lab/.runtime/
+tofu/.terraform/
+*.tfplan
+*.tfstate
+*.tfstate.backup
+__pycache__/
+
+# Never commit credentials
+.env
+*.key
+*.pem
+*.kubeconfig
+kubeconfig
+kubeconfig.*
+*.tar
