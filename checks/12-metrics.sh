@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # @trace EV-012
-# Claim: the opportunity, API call and field mutation counts of TC-04 are re-derived from RAW records;
-#        with a zero denominator the rate is null.
+# Claim: the opportunity, API call and field mutation counts of TC-04 are re-derived from RAW records.
 # Expected: 0 when the summary can be reproduced from the raw record.
 # "Flaps per hour" is NOT used: it measures the scheduling policy.
 #
@@ -33,10 +32,13 @@ esac
 [ "$(jq -r '.incomplete' <<<"$m")" = 0 ] || cannot_run "persisted writes without resourceVersion or uid: counts not attributable"
 [ "$(jq -r '.ambiguous' <<<"$m")" = 0 ]  || cannot_run "equal resourceVersions written by different actors: attribution ambiguous"
 [ "$(jq -r '.uids|length' <<<"$m")" = 1 ] || cannot_run "the object was recreated (or never written): counts span more than one object"
-if [ "$opp" -eq 0 ]; then rate="null"; else rate=$(awk -v m="$fm" -v f="$opp" 'BEGIN{printf "%.3f", m/f}'); fi
-jq -n --argjson f "$opp" --argjson m "$m" --arg o "$rate" \
-   '{opportunities:$f} + $m + {flux_mutations_per_opportunity:(if $o=="null" then null else ($o|tonumber) end),
-     note:"API calls and field mutations are counted SEPARATELY. A dry run writes nothing. A field mutation is a persisted write that changed data.value from the previous persisted value (resourceVersion order). The denominator is the number of completed opportunities; when it is zero the rate is null."}' \
+# No per-opportunity rate: the opportunities are the reconciliations requested inside the window, while Flux also
+# reconciles when the Kustomization is resumed (in the reference runs the B->C write came right after the resume,
+# before the first requested reconciliation). Dividing the
+# mutations by the requested opportunities would attribute a write to reconciliations that did not make it.
+jq -n --argjson f "$opp" --argjson m "$m" \
+   '{opportunities:$f} + $m +
+    {note:"API calls and field mutations are counted SEPARATELY. A dry run writes nothing. A field mutation is a persisted write that changed data.value from the previous persisted value (resourceVersion order). opportunities = reconciliations requested inside the window; the counts cover the whole window, including the reconciliation triggered by resuming."}' \
    > "$d/metrics.json"
-[ "$opp" -gt 0 ] || cannot_run "zero opportunities: rate null, no conclusion about non-convergence"
-pass "opportunities=$opp flux_api_calls=$(jq -r .flux_calls <<<"$m") (dry_runs=$(jq -r .flux_dry_runs <<<"$m") writes=$(jq -r .flux_writes <<<"$m")) flux_field_mutations=$fm [$(jq -r .flux_transitions <<<"$m")] rate=$rate"
+[ "$opp" -gt 0 ] || cannot_run "zero completed opportunities: no conclusion about the window"
+pass "opportunities=$opp flux_api_calls=$(jq -r .flux_calls <<<"$m") (dry_runs=$(jq -r .flux_dry_runs <<<"$m") writes=$(jq -r .flux_writes <<<"$m")) flux_field_mutations=$fm [$(jq -r .flux_transitions <<<"$m")]"

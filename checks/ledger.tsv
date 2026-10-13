@@ -16,7 +16,7 @@ EV-008	TC-04: after a successful apply and B in the API, the Flux actor changes 
 EV-009	TC-05: the four single-writer controls give A,B,B,B with no second-actor mutation.	checks/09-control.sh	auto	run
 EV-010	Two clean repetitions have equal normalized actions, rejection classes and field transitions.	checks/10-repeat.sh	auto	pair
 EV-011	The experiment actors did not write outside the experiment namespaces, and the cluster was removed.	checks/11-isolation.sh	auto	host
-EV-012	TC-04: opportunity, API call, dry-run and field mutation counts are re-derived from the raw audit records; with zero opportunities the rate is null and the check exits 77.	checks/12-metrics.sh	auto	run
+EV-012	TC-04: opportunity, API call, dry-run and field mutation counts are re-derived from the raw audit records; with zero completed opportunities the check exits 77.	checks/12-metrics.sh	auto	run
 EV-014	Decision gate: with valid controls, TC-02 or TC-04 supports the hypothesis (0 supported, 1 refuted, 77 inconclusive).	checks/14-hypothesis.sh	auto	pair
 EV-015	Whether the workflow failure is useful as a talk is a human judgement.	checks/90-talk-value.sh	manual	run
 EV-016	The approver identity and the origin of an independent manifest digest need a human check.	checks/91-record-origin.sh	manual	run

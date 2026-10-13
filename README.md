@@ -52,11 +52,13 @@ was applied, so there was no lock contention at that moment. The saved plan carr
 from, and `tofu apply` refuses it when the state has moved on. In TC-02 the edit went straight to the API and did
 not touch the state, so neither mechanism had anything to detect.
 
-**Counting API calls and field changes separately (TC-04).** In the 120-second window there were 3 completed
-reconciliation opportunities. Flux's kustomize-controller made 5 successful API calls on the object: 4 were dry
-runs (`?dryRun=All`, the controller's drift detection; nothing is written) and 1 was a server-side apply that
-persisted. That one write is Flux's only field change: `B → C` (with OpenTofu's `A → B` before the window, the
-object changed twice in TC-04). Counting Flux's API calls gives 5; counting Flux's field changes gives 1. The request
+**Counting API calls and field changes separately (TC-04).** In the 120-second window Flux reconciled four times:
+once when the Kustomization was resumed, then three times on request (the 3 recorded opportunities). Across them
+kustomize-controller made 5 successful API calls on the object: 4 were dry runs (`?dryRun=All`, the controller's
+drift detection; nothing is written) and 1 was a server-side apply that persisted. That write happened right after
+the Kustomization was resumed, about two seconds before the first requested reconciliation; the three requested
+reconciliations found nothing to change. It is Flux's only field change: `B → C` (with OpenTofu's `A → B` before the
+window, the object changed twice in TC-04). Counting Flux's API calls gives 5; counting Flux's field changes gives 1. The request
 body cannot tell them apart: the server-side apply here sends the whole desired value, so request and response both
 say `C` even when the field changed. EV-012 therefore orders the persisted writes by `resourceVersion` and compares
 each with the one before it.
