@@ -1,0 +1,1 @@
+tofu apply -input=false -auto-approve -var deger=C

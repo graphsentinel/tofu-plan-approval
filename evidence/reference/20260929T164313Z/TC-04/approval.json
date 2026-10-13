@@ -1,0 +1,8 @@
+{
+  "approver": "author",
+  "approved_at": "2026-09-29T16:48:05Z",
+  "binding_kind": "plan_artifact",
+  "binding_value": "reviewed.tfplan",
+  "reviewed_plan_sha256": "2094bf069ff74f3e2de30350c07e4e998a08cfbf8ba7f391544708413fb718bf",
+  "not": "onaylayan kimligi DOSYADA ADI YAZDIGI ICIN dogrulanmis sayilmaz (KANIT-016)"
+}

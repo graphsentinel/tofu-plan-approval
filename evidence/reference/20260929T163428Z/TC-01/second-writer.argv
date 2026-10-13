@@ -1,0 +1,1 @@
+kubectl --kubeconfig /home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/kubeconfig.second-writer -n t27 patch configmap t27 --type=merge -p {"data":{"value":"C"}}

@@ -1,0 +1,136 @@
+{
+  "isaret": "TC-01",
+  "utc": "2026-09-29T16:34:50Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-01/audit.jsonl",
+  "satir": 1301,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-01",
+  "utc": "2026-09-29T16:35:04Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-01/audit.jsonl",
+  "satir": 1402,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-02",
+  "utc": "2026-09-29T16:35:27Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-02/audit.jsonl",
+  "satir": 1305,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-02",
+  "utc": "2026-09-29T16:35:40Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-02/audit.jsonl",
+  "satir": 1401,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-03",
+  "utc": "2026-09-29T16:36:02Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-03/audit.jsonl",
+  "satir": 1296,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-03",
+  "utc": "2026-09-29T16:36:28Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-03/audit.jsonl",
+  "satir": 1441,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-04",
+  "utc": "2026-09-29T16:36:50Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-04/audit.jsonl",
+  "satir": 1308,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-04",
+  "utc": "2026-09-29T16:39:26Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-04/audit.jsonl",
+  "satir": 2561,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:39:49Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 1310,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:41:04Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 2033,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:41:27Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 3337,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:41:39Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 3427,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:42:01Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 4728,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:42:18Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 4815,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:42:40Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 6122,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "TC-05",
+  "utc": "2026-09-29T16:42:52Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/TC-05/audit.jsonl",
+  "satir": 6209,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}
+{
+  "isaret": "kapanis",
+  "utc": "2026-09-29T16:42:52Z",
+  "dosya": "/home/labuser/_____________________________________________________________________/tofu-plan-approval/runs/20260929T163428Z/audit/audit.jsonl",
+  "satir": 6212,
+  "runtime": "docker",
+  "not": "okuma isareti — bu satirdan sonrasi bu anlik goruntude YOKTUR"
+}

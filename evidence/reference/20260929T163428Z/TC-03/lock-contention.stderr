@@ -1,0 +1,19 @@
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mError acquiring the state lock[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError message: the state is already locked by another tofu client
+[31m│[0m [0mLock Info:
+[31m│[0m [0m  ID:        e3f50320-1352-854e-323a-14dcc61d0c35
+[31m│[0m [0m  Path:      
+[31m│[0m [0m  Operation: OperationTypeApply
+[31m│[0m [0m  Who:       labuser@labhost
+[31m│[0m [0m  Version:   1.12.6
+[31m│[0m [0m  Created:   2026-09-29 16:36:15.811209563 +0000 UTC
+[31m│[0m [0m  Info:      
+[31m│[0m [0m
+[31m│[0m [0m
+[31m│[0m [0mOpenTofu acquires a state lock to protect the state from being written
+[31m│[0m [0mby multiple users at the same time. Please resolve the issue above and try
+[31m│[0m [0magain. For most commands, you can disable locking with the "-lock=false"
+[31m│[0m [0mflag, but this is not recommended.
+[31m╵[0m[0m
