@@ -1,0 +1,20 @@
+run: 20261013T044514Z  (runs available for the pair checks: 1)
+  EV-001   PASSED  every pin equals pins.env
+  EV-002   PASSED  193 audit events, 67 completed mutations, bodies complete
+  EV-003   PASSED  lock contention observed and the reason is the lock
+  EV-004   PASSED  the archive matches its own manifest (NOT independent evidence)
+  EV-005   PASSED  plan difference: [no-op] -> [update]; API C -> A
+  EV-006   PASSED  hash equal, state identity same, outside value C, apply outcome: SUCCEEDED(end=B)
+  EV-007   PASSED  competing apply moved the serial 4->5, earlier plan rejected for the state, target unchanged (C)
+  EV-008   PASSED  barrier B, UID stable, 3 opportunities, 1 persisted Flux-actor B->C write(s), window end=C
+  EV-009   PASSED  four controls A,B,B,B; no foreign-actor mutation
+  EV-010   N/A     compares two runs; only one exists so far
+  EV-011   PASSED  experiment actors did not write outside the experiment, cluster removed
+  EV-012   PASSED  opportunities=3 flux_api_calls=5 (dry_runs=4 writes=1) flux_field_mutations=1 [B->C] rate=0.333
+  EV-014   N/A     compares two runs; only one exists so far
+  EV-015   MANUAL  human judgement: is the finding a useful workflow failure, or a tutorial/regression suite
+  EV-016   MANUAL  human check: is the approver in approval.json real; was the MANIFEST.sha256 digest kept OUTSIDE the archive
+  EV-017   MANUAL  human review: does every abstract sentence meet the condition next to it
+  EV-018   GATE    publication gate: scripts/verify.sh --publish
+
+passed=11  failed=0  could-not-run=0  manual=3  not-applicable=3

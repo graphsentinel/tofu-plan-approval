@@ -1,0 +1,82 @@
+
+==> images: rancher/k3s:v1.37.0-k3s1, registry:2 (k3d's local registry)
+
+==> OpenTofu provider hashicorp/kubernetes 2.38.0, checked against tofu/.terraform.lock.hcl
+ready
+
+==> namespaces t27, t27-state; service account second-writer (edit role)
+
+==> OpenTofu: ConfigMap t27/t27 = A, state in secret t27-state/tfstate-default-t27
+
+==> Flux 2.9.5 (source-controller, kustomize-controller); source gitops/ (value C), suspended
+✚ generating manifests
+✔ manifests build completed
+► installing components in flux-system namespace
+◎ verifying installation
+✔ kustomize-controller: deployment ready
+✔ source-controller: deployment ready
+✔ install finished
+► suspending kustomization t27 in flux-system namespace
+✔ kustomization suspended
+
+==> lab objects on cluster t27
+  ns  flux-system   Active   49s
+  ns  t27           Active   51s
+  ns  t27-state     Active   50s
+  ConfigMap t27/t27: data.value=A
+  flux kustomization  t27   0s          
+
+Installed. Walk a path by hand, for example TC-02:
+  export KUBECONFIG=/home/ubuntu/lab/lab/.runtime/kubeconfig PATH=/home/ubuntu/lab/bin:$PATH TF_VAR_kubeconfig=/home/ubuntu/lab/lab/.runtime/kubeconfig; cd /home/ubuntu/lab/tofu
+  tofu plan -var value=B -out=/tmp/b.tfplan                      # the plan you approve: A -> B
+  kubectl -n t27 patch configmap t27 --type=merge -p '{"data":{"value":"C"}}'   # a second writer
+  tofu apply /tmp/b.tfplan                                       # applies, C -> B; nothing noticed C
+  flux resume kustomization t27 -n flux-system                   # TC-04: Flux writes its C back
+
+==> run 1/5: scripts/experiment.sh all (about 10 minutes; each scenario recreates cluster t27)
+-- audit canary seen (4050 lines)
+-- creating k3d cluster (rancher/k3s:v1.37.0-k3s1) [TC-05]
+-- audit canary seen (5399 lines)
+== run finished: /home/ubuntu/lab/runs/20261013T044514Z
+  verify: exit 0 (passed=11  failed=0  could-not-run=0  manual=3  not-applicable=3)
+
+==> run 2/5: scripts/experiment.sh all (about 10 minutes; each scenario recreates cluster t27)
+-- audit canary seen (4049 lines)
+-- creating k3d cluster (rancher/k3s:v1.37.0-k3s1) [TC-05]
+-- audit canary seen (5396 lines)
+== run finished: /home/ubuntu/lab/runs/20261013T045011Z
+  verify: exit 0 (passed=13  failed=0  could-not-run=0  manual=3  not-applicable=1)
+
+==> run 3/5: scripts/experiment.sh all (about 10 minutes; each scenario recreates cluster t27)
+-- audit canary seen (4053 lines)
+-- creating k3d cluster (rancher/k3s:v1.37.0-k3s1) [TC-05]
+-- audit canary seen (5424 lines)
+== run finished: /home/ubuntu/lab/runs/20261013T045453Z
+  verify: exit 0 (passed=13  failed=0  could-not-run=0  manual=3  not-applicable=1)
+
+==> run 4/5: scripts/experiment.sh all (about 10 minutes; each scenario recreates cluster t27)
+-- audit canary seen (4074 lines)
+-- creating k3d cluster (rancher/k3s:v1.37.0-k3s1) [TC-05]
+-- audit canary seen (5438 lines)
+== run finished: /home/ubuntu/lab/runs/20261013T045950Z
+  verify: exit 0 (passed=13  failed=0  could-not-run=0  manual=3  not-applicable=1)
+
+==> run 5/5: scripts/experiment.sh all (about 10 minutes; each scenario recreates cluster t27)
+-- audit canary seen (4051 lines)
+-- creating k3d cluster (rancher/k3s:v1.37.0-k3s1) [TC-05]
+-- audit canary seen (5403 lines)
+== run finished: /home/ubuntu/lab/runs/20261013T050524Z
+  verify: exit 0 (passed=13  failed=0  could-not-run=0  manual=3  not-applicable=1)
+
+==> the platform cluster was up before the test: recreating it (empty)
+
+Runs of this test: 5 (expected 5): 20261013T044514Z 20261013T045011Z 20261013T045453Z 20261013T045950Z 20261013T050524Z
+
+| | expected | matching in every run |
+|---|---|---|
+| check results | 17 | 17 |
+| measurement rows | 39 | 39 |
+
+pair checks N/A in the first run (no earlier run on this machine): 2
+
+ALL CHECKS PASSED

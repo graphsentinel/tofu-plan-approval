@@ -82,6 +82,12 @@ was run, and nothing here is claimed about one.
 | Source | Stack | Runs | Where |
 |---|---|---|---|
 | Reference runs, 2026-09-29 | workstation, Docker; versions below | 2 full runs (TC-01…TC-05 each) | [evidence/reference](evidence/reference) |
+| Clean VM, 2026-10-13 | Ubuntu 26.04, docker.io, 4 CPU / 8 GB; this repository's quickstart from zero | 5 full runs, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu26.04](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04) |
+| Clean VM, 2026-10-13 | Ubuntu 24.04, docker.io, 4 CPU / 8 GB; same | 1 full run, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu24.04](evidence/e2e-multipass/20261013T044132Z-ubuntu24.04) |
+
+Every one of the 8 clean-VM runs matched [lab/expected.tsv](lab/expected.tsv) in all 17 check results and all 39
+measurement rows, the same rows the reference runs give; each VM run also passed `install`, `reinstall`, `uninstall`
+and `cluster-down` with their residue checks. The VM runs used the committed tree named in each `source.txt`.
 
 The reference runs were recorded by the first version of this harness, before its file names were translated to
 English; [evidence/reference/README.md](evidence/reference/README.md) lists the renames and what was masked.
@@ -203,6 +209,7 @@ checks/       ledger.tsv · 01..15 automatic checks · 90..92 human judgement (a
 lab/          expected.tsv
 tofu/ gitops/ k3d/   the experiment's OpenTofu configuration, Flux source and audit policy
 evidence/     reference/ the two reference runs, measurements.tsv
+              e2e-multipass/ the clean-VM runs: summaries, per-run check results and measurement rows, step logs
 publish.env   the published address, read by checks/15-publish.sh
 ```
 
