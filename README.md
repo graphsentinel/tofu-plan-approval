@@ -101,8 +101,9 @@ scripts/platform.sh cluster-up    # the lab's k3d cluster t27 and registry t27-r
 RUNS=2 scripts/lab.sh all         # build, install, then the full experiment twice, checks, summary
 ```
 
-`lab.sh test` prints `ALL CHECKS PASSED` when every run matches [lab/expected.tsv](lab/expected.tsv). One full run
-(five scenarios, each on a fresh cluster) takes roughly 10–15 minutes. Remove the lab and its cluster
+`lab.sh test` prints `ALL CHECKS PASSED` when every run matches [lab/expected.tsv](lab/expected.tsv). On a 4-CPU,
+8 GB Ubuntu 26.04 VM, `platform.sh install` plus `cluster-up` took 98 s and one full run (five scenarios, each on a
+fresh cluster, with its checks) about 5 minutes. Remove the lab and its cluster
 with `scripts/lab.sh uninstall && scripts/platform.sh cluster-down`; the tools stay in `bin/` and Ubuntu packages
 installed by `install` stay installed.
 
@@ -190,6 +191,7 @@ pinned result.
 | `EV-001 FAILED: pin drift` | a tool in `bin/` differs from `scripts/versions.env`: delete it and run `scripts/platform.sh install` |
 | port 5111 in use | change `REGISTRY_PORT` in `scripts/versions.env`, then `scripts/platform.sh install` |
 | `EV-002 COULD NOT RUN: audit` | the audit canary was not seen; check `docker exec k3d-t27-server-0 ls /var/log/k3s-audit` |
+| `Permission denied` on `runs/*/…/audit/audit.log` | the k3s container writes the raw audit log as root; the checks read the `audit.jsonl` snapshots instead. The directory is yours, so `rm -rf runs/` still works |
 | k3s fails with too many open files | `scripts/platform.sh install` raises the inotify limits; run it again |
 
 ## Layout

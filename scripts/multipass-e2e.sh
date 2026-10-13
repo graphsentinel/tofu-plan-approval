@@ -58,11 +58,13 @@ run() { # <log name> <command>: runs in a fresh login shell, so group changes fr
 
 rc=0
 step() { [ $rc = 0 ] || return 0; run "$@" || rc=$?; }
-# raw run archives, kubeconfig files left out (client keys and tokens of the VM's lab clusters)
+# raw run archives. Left out: kubeconfig files (client keys and tokens of the VM's lab clusters) and the API
+# server's raw audit.log, which the k3s container writes as root (unreadable by the VM user; the checks read the
+# audit.jsonl snapshots taken from the container, which are included). tar's messages go to raw-runs-*.err.
 capture() {
   [ $rc = 0 ] || return 0
-  multipass exec "$VM" -- bash -c "cd ~/lab && tar --exclude='kubeconfig' --exclude='kubeconfig.*' -czf - runs results lab/.runtime/summary.md lab/.runtime/test-started" \
-    > "$OUT/raw-runs-$1.tar.gz" && tar -tzf "$OUT/raw-runs-$1.tar.gz" >/dev/null \
+  multipass exec "$VM" -- bash -c "cd ~/lab && tar --exclude='kubeconfig' --exclude='kubeconfig.*' --exclude='audit.log' -czf - runs results lab/.runtime/summary.md lab/.runtime/test-started" \
+    > "$OUT/raw-runs-$1.tar.gz" 2> "$OUT/raw-runs-$1.err" && tar -tzf "$OUT/raw-runs-$1.tar.gz" >/dev/null \
     && echo "raw runs: raw-runs-$1.tar.gz" | tee -a "$OUT/host.log" \
     || { echo "raw run export failed ($1)" | tee -a "$OUT/host.log"; rc=1; }
 }
