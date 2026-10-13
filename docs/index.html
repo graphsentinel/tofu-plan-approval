@@ -96,8 +96,8 @@ td.ctl { color: var(--muted); font-weight: 600; }
   <h2>The setup</h2>
   <p>One object, one field: <code>ConfigMap t27/t27</code>, <code>data.value</code>. OpenTofu keeps its state in the
     Kubernetes backend with a lease-based lock. A person triggers the OpenTofu CLI; no OpenTofu controller is involved.
-    The second writer is a separate service account with its own token, so the API server's audit log records it as a
-    different user.</p>
+    The second writer is a separate service account with its own token in TC-01 and TC-02 (so the API server's audit
+    log records it as a different user), a competing OpenTofu apply on the shared state in TC-03, and Flux in TC-04.</p>
   <div class="flow">
     <span>start <span class="val">A</span></span><span class="arrow">→</span>
     <span>approved change <span class="val">B</span></span><span class="arrow">·</span>
