@@ -112,7 +112,7 @@ In this pinned setup, for the four boundary tests:
 Control (TC-05): with no second writer, the same paths give `A, B, B, B`, with no write by the second writer or Flux.
 
 The stale-plan check compares the lineage and serial of the state a saved plan was made from with the current state
-(OpenTofu v1.12.6, `internal/backend/local/backend_local.go`); it does not read the live object. That is why TC-03 was
+(OpenTofu v1.12.6, [`internal/backend/local/backend_local.go`, lines 347–375](https://github.com/opentofu/opentofu/blob/v1.12.6/internal/backend/local/backend_local.go#L347-L375)); it does not read the live object. That is why TC-03 was
 refused and TC-02 was not.
 
 Three checks this implies for a pipeline:
