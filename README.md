@@ -1,12 +1,15 @@
 # What does plan approval guarantee? OpenTofu, shared state and a second writer
 
 A Kubernetes lab that asks what approving an OpenTofu plan actually binds when a second writer reaches the same
-object. One ConfigMap field goes through four boundary tests and a sole-writer control, on pinned versions of
+object, and whether a check before the apply can stop it. One ConfigMap field goes through four boundary tests, a
+sole-writer control and a pre-apply drift gate, on pinned versions of
 OpenTofu, its Kubernetes provider and Flux, on a local k3d cluster that anyone can rebuild from zero with a few
 commands ([Quickstart](#quickstart)).
 
 **Result, in this pinned setup: exactly one of the four is stopped, by the saved plan's stale-plan check
-("Saved plan is stale"), not by the state lock.**
+("Saved plan is stale"), not by the state lock. A pre-apply gate that looks for drift only in the fields the plan
+changes stopped the out-of-band edit and let a clean plan through; the obvious gates (the refresh-only exit code or
+its drift report) flagged the clean plan too.**
 
 Project page: https://graphsentinel.github.io/tofu-plan-approval/
 
@@ -58,6 +61,7 @@ Flux's service account.
 | **TC-03** | A competing apply advances the shared state, then the earlier saved plan is applied | the saved plan file |
 | **TC-04** | Apply the approved plan cleanly, then let Flux reconcile a source that says `C` | the saved plan file |
 | **TC-05** | The same four paths with no second writer | control |
+| **TC-06** | TC-02 with a pre-apply drift gate, once with the second writer (drift) and once without (clean) | the saved plan file, applied only if the gate allows it |
 
 Recorded per path: what the approval was bound to, planned actions, state serial and lineage, the API writes the
 audit log captured (with request and response bodies for the target object), field managers, final field values,
@@ -69,15 +73,15 @@ and the exit code plus rejection class of each recorded command. Every scenario 
 
 | Source | Stack | Runs | Where |
 |---|---|---|---|
-| Reference runs, 2026-09-29 | workstation, Docker; the pinned versions | 2 full runs (TC-01…TC-05 each) | [evidence/reference](evidence/reference) |
+| Reference runs, 2026-09-29 | workstation, Docker; the pinned versions | 2 full runs (TC-01…TC-05 each; recorded before TC-06 existed) | [evidence/reference](evidence/reference) |
 | Clean VM, 2026-10-13 | Ubuntu 26.04, docker.io, 4 CPU / 8 GB; this repository's quickstart from zero | 5 full runs, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu26.04](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04) |
 | Clean VM, 2026-10-13 | Ubuntu 24.04, docker.io, 4 CPU / 8 GB; same | 1 full run, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu24.04](evidence/e2e-multipass/20261013T044132Z-ubuntu24.04) |
 
 The two reference runs are identical row by row. The complete records of one clean-VM run, written by the current
 harness with English names throughout, are in
 [evidence/e2e-multipass/…-ubuntu26.04/run](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04/run). Every one of the 8 clean-VM runs matched
-[lab/expected.tsv](lab/expected.tsv) in all 17 check results and all 39 measurement rows, the same rows the reference
-runs give; each VM also passed `install`, `reinstall`, `uninstall` and `cluster-down` with their residue checks. The
+[lab/expected.tsv](lab/expected.tsv) as it stood then, in all 17 check results and all 39 measurement rows, the same
+rows the reference runs give; each VM also passed `install`, `reinstall`, `uninstall` and `cluster-down` with their residue checks. The
 VM runs used the committed tree named in each `source.txt`. The reference runs were recorded by the first version of
 this harness, before its file names were translated to English;
 [evidence/reference/README.md](evidence/reference/README.md) lists the renames and what was masked.
@@ -107,7 +111,8 @@ In this pinned setup, for the four boundary tests:
 | **Stale-plan check** | did not engage: the runner applied a fresh plan made after the edit | did not engage: the edit changed neither the state's serial nor its lineage | **engaged**: plan saved at serial 4, state at 5, *"Saved plan is stale"*; the object kept `C` | did not reject the approved plan; Flux's write came after the apply |
 | **State lock** | no contention: the second writer was not an OpenTofu run | no contention: the second writer was not an OpenTofu run | refused a concurrent runner in a separate step (*"Error acquiring the state lock"*); it is not what refused the earlier plan | no contention: the second writer was not an OpenTofu run |
 | **Flux server-side apply** (`ssa: Override`) | — | — | — | after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write `B → C` |
-| **Left open** | what is applied is whatever the re-plan produces | a change to the live object between plan and apply | — | a later change by another authorized writer; here Flux, `B → C` |
+| **Pre-apply gate on planned fields** (TC-06) | — | blocked the saved plan when a planned field had changed (`C` kept), let it through otherwise (`A → B`) | — | — |
+| **Left open** | what is applied is whatever the re-plan produces | without a gate: a change to the live object between plan and apply. With the TC-06 gate: changes to fields the plan does not change, and any change between the gate and the apply | — | a later change by another authorized writer; here Flux, `B → C` |
 
 Control (TC-05): with no second writer, the same paths give `A, B, B, B`, with no write by the second writer or Flux.
 
@@ -120,6 +125,32 @@ Three checks this implies for a pipeline:
 1. Does the approval bind a configuration revision or the exact saved plan that will be applied?
 2. Does anything compare the live object with the reviewed plan before applying?
 3. Which other writers can change the same fields during or after the apply?
+
+### A pre-apply drift gate (TC-06)
+
+TC-06 repeats TC-02 and adds a check between approval and apply: an OpenTofu refresh-only plan, which reads the
+live object and compares it with the state without changing either, and a `jq` comparison of it with the reviewed
+plan. It runs twice, once after the second
+writer set `C` (drift) and once with no second writer (clean). Three ways of reading the refresh-only plan were
+recorded; only gate 3 decides.
+
+| Gate | What it reads | drift path (field `C`) | clean path (field `A`) |
+|---|---|---|---|
+| 1 | exit code of `tofu plan -refresh-only -detailed-exitcode` | 2 | 2 |
+| 2 | `resource_drift` messages of `tofu plan -refresh-only -json` | 1 | 1 |
+| 3 | drift in the attributes the reviewed plan changes (`data`), from the saved refresh-only plan (`-out`, `tofu show -json`) | 1 → **blocked**; the field stays `C`, the state serial does not move | 0 → **applied**, `A → B` |
+
+Gates 1 and 2 reported drift on both paths, so blocking on either would have rejected the clean plan too. In the
+refresh-only plan, `binary_data`, `metadata.annotations` and `metadata.labels` go from `null` in the state to `{}`
+as read from the cluster, and the plan reports that as a change made outside OpenTofu. Gate 3 looks only at the
+attributes the reviewed plan changes and told the two paths apart.
+
+Limits: gate 3 sees drift only in the attributes the plan changes, compared as top-level attributes (`data` as a
+whole); a change in another attribute, or any change between the gate and the apply, is not covered. It addresses
+TC-02's situation; it does not stop TC-04, where Flux writes after the apply. It fails closed: a failed or errored plan,
+an empty or unreadable plan JSON, an action other than an update, or any value unknown until apply blocks the plan. It is a step in the
+harness (`tc06` in [scripts/experiment.sh](scripts/experiment.sh)), not a packaged tool; EV-019 and EV-020 check
+its two paths.
 
 ### Counting API calls and field changes separately (TC-04)
 
@@ -143,6 +174,7 @@ therefore orders the persisted writes by `resourceVersion` and compares each wit
 | "This holds on every Kubernetes distribution" | one distribution (k3s); not repeated on a second one (open limit below) |
 | "This holds for other OpenTofu, provider or Flux versions" | measured on the pinned versions only |
 | "The lock would have protected TC-02" | the second writer's edit did not change the state; there was no contention for a lock to resolve |
+| "A pre-apply gate closes the gap" | TC-06's gate covers only the attributes the plan changes, and nothing between the gate and the apply; gates 1 and 2 would have blocked the clean path too |
 
 **Open limits.** (1) Independence from the distribution has not been established: everything ran on k3s. Repeating
 TC-02 and TC-04 on another distribution would broaden the evidence; a different result there would need
@@ -167,7 +199,7 @@ If `install` added you to the `docker` group, the next commands pick the group u
 `sg docker`). `scripts/lab.sh all` ends with the number of check results and measurement rows matching
 [lab/expected.tsv](lab/expected.tsv) and either `ALL CHECKS PASSED` or the list of differences (exit status 1). The
 table is also written to `lab/.runtime/summary.md`. On a 4-CPU, 8 GB Ubuntu 26.04 VM, `install` plus `cluster-up`
-took 98 s and one full run (five scenarios, each on a fresh cluster, with its checks) about 5 minutes (the step
+took 98 s and one full run (then five scenarios, each on a fresh cluster, with its checks) about 5 minutes (the step
 times are in each VM's `host.log` under [evidence/e2e-multipass](evidence/e2e-multipass)). `all` finishes with an
 empty platform cluster: run `scripts/lab.sh install` again before walking through a path by hand.
 
@@ -215,7 +247,7 @@ someone else: the scripts refuse to delete or reuse it. They create, change and 
 | `scripts/lab.sh uninstall` | `tofu destroy`, `flux uninstall`, the lab's labelled namespaces and binding; then checks nothing is left |
 | `scripts/lab.sh reinstall` | `uninstall` + `install` |
 | `scripts/lab.sh test` | the measured experiment `RUNS` times: [scripts/experiment.sh](scripts/experiment.sh) `all`, the checks ([scripts/verify.sh](scripts/verify.sh)) and the measurement rows ([scripts/collect.py](scripts/collect.py)) of each run, then `summary`. If the platform cluster was up before, it is recreated (empty) at the end |
-| `scripts/lab.sh summary` | compares the last `test` with [lab/expected.tsv](lab/expected.tsv), cell by cell: every run's 17 check results and 39 measurement rows, the shell and Python counts of TC-04 against each other, no runner error, the test run to its end |
+| `scripts/lab.sh summary` | compares the last `test` with [lab/expected.tsv](lab/expected.tsv), cell by cell: every run's check results and measurement rows, the shell and Python counts of TC-04 against each other, no runner error, the test run to its end |
 | `scripts/lab.sh status` | the lab's objects, the ConfigMap's value, Flux |
 | `scripts/lab.sh all` | `build` + `install` + `test` |
 | `scripts/check-versions.sh` | the pinned versions against the latest upstream releases |

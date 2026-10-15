@@ -18,6 +18,7 @@
 # Expected non-runs, each named in the output, never silent:
 #   MANUAL   kind=manual checks (EV-015/016/017) exit 77 by design: a human judgement
 #   N/A      scope=host checks with --reference (they test this machine, not the record);
+#            scope=tc06 checks with --reference (the reference runs were recorded before TC-06 existed);
 #            scope=pair checks when only one run exists (they compare two runs)
 #   GATE     EV-018 without --publish (it needs the published URL); with --publish a 77 there is a failure
 # ==================================================================
@@ -73,6 +74,7 @@ while IFS=$'\t' read -r id claim script kind scope || [ -n "$id" ]; do
   if [ "$kind" = gate ] && [ "$PUBLISH" = 0 ]; then row "$id" GATE "publication gate: scripts/verify.sh --publish"; N=$((N+1)); continue; fi
   if [ "$scope" = host ] && [ "$REFERENCE" = 1 ] && [ "$kind" != gate ]; then row "$id" N/A "checks this machine, not the recorded run"; N=$((N+1)); continue; fi
   if [ "$scope" = pair ] && [ "$NRUNS" -lt 2 ]; then row "$id" N/A "compares two runs; only one exists so far"; N=$((N+1)); continue; fi
+  if [ "$scope" = tc06 ] && [ "$REFERENCE" = 1 ]; then row "$id" N/A "reads TC-06, which the reference runs predate"; N=$((N+1)); continue; fi
   [ -x "$script" ] || { row "$id" SKIPPED "script missing or not executable: $script"; S=$((S+1)); continue; }
   msg=$("$script" 2>&1 | tail -1); rc=${PIPESTATUS[0]}
   case "$rc:$kind" in
