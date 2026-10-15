@@ -103,11 +103,17 @@ In this pinned setup, for the four boundary tests:
 
 | Mechanism | TC-01 re-plan after approval | TC-02 saved plan after an out-of-band edit | TC-03 competing apply, then the earlier plan | TC-04 Flux after a clean apply |
 |---|---|---|---|---|
-| **Saved plan file** | not what was applied: the reviewed plan was a no-op, the runner applied a fresh plan (`update`, `C → A`) | applied as reviewed (identical sha256) over the edit: `C → B` | the earlier saved plan was rejected; the field stayed `C` | applied as reviewed: `A → B` |
-| **Stale-plan check** | no saved plan from an older state was applied | did not engage: the edit changed neither the state's serial nor its lineage | **engaged**: plan saved at serial 4, state at 5, *"Saved plan is stale"*; the object kept `C` | did not reject the approved apply; Flux reconciling afterwards is outside what it checks |
-| **State lock** | stopped nothing here | stopped nothing here | refused a concurrent runner in a separate step (*"Error acquiring the state lock"*); it is not what refused the earlier plan | stopped nothing here |
+| **Saved plan file** | not what was applied: the reviewed plan was a no-op, the runner applied a fresh plan (`update`, `C → A`) | applied unchanged (same sha256) over the edit: the field went `C → B`, not the reviewed `A → B` | the earlier saved plan was rejected; the field stayed `C` | applied as reviewed: `A → B` |
+| **Stale-plan check** | did not engage: the runner applied a fresh plan made after the edit | did not engage: the edit changed neither the state's serial nor its lineage | **engaged**: plan saved at serial 4, state at 5, *"Saved plan is stale"*; the object kept `C` | did not reject the approved plan; Flux's write came after the apply |
+| **State lock** | no contention: the second writer was not an OpenTofu run | no contention: the second writer was not an OpenTofu run | refused a concurrent runner in a separate step (*"Error acquiring the state lock"*); it is not what refused the earlier plan | no contention: the second writer was not an OpenTofu run |
 | **Flux server-side apply** (`ssa: Override`) | — | — | — | after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write `B → C` |
 | **Left open** | what is applied is whatever the re-plan produces | a change to the live object between plan and apply | — | a later change by another authorized writer; here Flux, `B → C` |
+
+Control (TC-05): with no second writer, the same paths give `A, B, B, B`, with no write by the second writer or Flux.
+
+The stale-plan check compares the lineage and serial of the state a saved plan was made from with the current state
+(OpenTofu v1.12.6, `internal/backend/local/backend_local.go`); it does not read the live object. That is why TC-03 was
+refused and TC-02 was not.
 
 Three checks this implies for a pipeline:
 

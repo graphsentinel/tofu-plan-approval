@@ -141,14 +141,18 @@ td.ctl { color: var(--muted); font-weight: 600; }
     <table>
       <thead><tr><th>Mechanism</th><th>TC-01 re-plan after approval</th><th>TC-02 saved plan after an out-of-band edit</th><th>TC-03 competing apply, then the earlier plan</th><th>TC-04 Flux after a clean apply</th></tr></thead>
       <tbody>
-        <tr><td><strong>Saved plan file</strong></td><td>not what was applied: the reviewed plan was a no-op, the runner applied a fresh plan (<code>update</code>, <code>C → A</code>)</td><td>applied as reviewed (identical sha256) over the edit: <code>C → B</code></td><td>the earlier saved plan was rejected; the field stayed <code>C</code></td><td>applied as reviewed: <code>A → B</code></td></tr>
-        <tr><td><strong>Stale-plan check</strong></td><td>no saved plan from an older state was applied</td><td class="no">did not engage: the edit changed neither the state's serial nor its lineage</td><td class="yes">engaged: plan saved at serial 4, state at 5, <code>Saved plan is stale</code>; the object kept <code>C</code></td><td>did not reject the approved apply; Flux reconciling afterwards is outside what it checks</td></tr>
-        <tr><td><strong>State lock</strong></td><td>stopped nothing here</td><td>stopped nothing here</td><td>refused a concurrent runner in a separate step; it is not what refused the earlier plan</td><td>stopped nothing here</td></tr>
+        <tr><td><strong>Saved plan file</strong></td><td>not what was applied: the reviewed plan was a no-op, the runner applied a fresh plan (<code>update</code>, <code>C → A</code>)</td><td>applied unchanged (same sha256) over the edit: the field went <code>C → B</code>, not the reviewed <code>A → B</code></td><td>the earlier saved plan was rejected; the field stayed <code>C</code></td><td>applied as reviewed: <code>A → B</code></td></tr>
+        <tr><td><strong>Stale-plan check</strong></td><td>did not engage: the runner applied a fresh plan made after the edit</td><td class="no">did not engage: the edit changed neither the state's serial nor its lineage</td><td class="yes">engaged: plan saved at serial 4, state at 5, <code>Saved plan is stale</code>; the object kept <code>C</code></td><td>did not reject the approved plan; Flux's write came after the apply</td></tr>
+        <tr><td><strong>State lock</strong></td><td>no contention: the second writer was not an OpenTofu run</td><td>no contention: the second writer was not an OpenTofu run</td><td>refused a concurrent runner in a separate step; it is not what refused the earlier plan</td><td>no contention: the second writer was not an OpenTofu run</td></tr>
         <tr><td><strong>Flux server-side apply</strong></td><td>—</td><td>—</td><td>—</td><td class="no">after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write <code>B → C</code></td></tr>
         <tr><td><strong>Left open</strong></td><td>what is applied is whatever the re-plan produces</td><td>a change to the live object between plan and apply</td><td>—</td><td>a later change by another authorized writer; here Flux, <code>B → C</code></td></tr>
       </tbody>
     </table>
   </div>
+  <p class="note">Control (TC-05): with no second writer, the same paths give <code>A, B, B, B</code>, with no write by the second writer or Flux.</p>
+  <p>The stale-plan check compares the lineage and serial of the state a saved plan was made from with the current
+    state (OpenTofu v1.12.6, <code>internal/backend/local/backend_local.go</code>); it does not read the live object.
+    That is why TC-03 was refused and TC-02 was not.</p>
   <p>Three checks this implies for a pipeline:</p>
   <ol>
     <li>Does the approval bind a configuration revision or the exact saved plan that will be applied?</li>
