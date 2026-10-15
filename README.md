@@ -97,6 +97,24 @@ was applied, so there was no lock contention at that moment. The saved plan carr
 from, and `tofu apply` refuses it when the state has moved on. In TC-02 the edit went straight to the API and did
 not touch the state, so neither mechanism had anything to detect.
 
+### One page: what each mechanism covered
+
+In this pinned setup, for the four boundary tests:
+
+| Mechanism | TC-01 re-plan after approval | TC-02 saved plan after an out-of-band edit | TC-03 competing apply, then the earlier plan | TC-04 Flux after a clean apply |
+|---|---|---|---|---|
+| **Saved plan file** | not what was applied: the reviewed plan was a no-op, the runner applied a fresh plan (`update`, `C → A`) | applied as reviewed (identical sha256) over the edit: `C → B` | the earlier saved plan was rejected; the field stayed `C` | applied as reviewed: `A → B` |
+| **Stale-plan check** | no saved plan from an older state was applied | did not engage: the edit changed neither the state's serial nor its lineage | **engaged**: plan saved at serial 4, state at 5, *"Saved plan is stale"*; the object kept `C` | did not reject the approved apply; Flux reconciling afterwards is outside what it checks |
+| **State lock** | stopped nothing here | stopped nothing here | refused a concurrent runner in a separate step (*"Error acquiring the state lock"*); it is not what refused the earlier plan | stopped nothing here |
+| **Flux server-side apply** (`ssa: Override`) | — | — | — | after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write `B → C` |
+| **Left open** | what is applied is whatever the re-plan produces | a change to the live object between plan and apply | — | a later change by another authorized writer; here Flux, `B → C` |
+
+Three checks this implies for a pipeline:
+
+1. Does the approval bind a configuration revision or the exact saved plan that will be applied?
+2. Does anything compare the live object with the reviewed plan before applying?
+3. Which other writers can change the same fields during or after the apply?
+
 ### Counting API calls and field changes separately (TC-04)
 
 In the 120-second window Flux reconciled four times: once when the Kustomization was resumed, then three times on
