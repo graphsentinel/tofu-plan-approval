@@ -1,0 +1,4 @@
+► annotating Kustomization t27 in flux-system namespace
+✔ Kustomization annotated
+◎ waiting for Kustomization reconciliation
+✔ applied revision v1@sha256:231fb24535d0f32415e2d4490b1157aeeef430b7d2cd27b5a87108669570304a

@@ -1,0 +1,8 @@
+{
+  "approver": "ubuntu",
+  "approved_at": "2026-10-13T04:45:42Z",
+  "binding_kind": "git_revision",
+  "binding_value": "none",
+  "reviewed_plan_sha256": "",
+  "note": "the approver identity is NOT verified just because the file names it"
+}

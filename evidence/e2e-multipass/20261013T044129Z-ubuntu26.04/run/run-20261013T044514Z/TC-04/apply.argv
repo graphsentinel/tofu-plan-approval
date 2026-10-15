@@ -1,0 +1,1 @@
+tofu apply -input=false /home/ubuntu/lab/runs/20261013T044514Z/TC-04/reviewed.tfplan

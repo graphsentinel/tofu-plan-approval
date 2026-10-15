@@ -73,7 +73,9 @@ and the exit code plus rejection class of each recorded command. Every scenario 
 | Clean VM, 2026-10-13 | Ubuntu 26.04, docker.io, 4 CPU / 8 GB; this repository's quickstart from zero | 5 full runs, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu26.04](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04) |
 | Clean VM, 2026-10-13 | Ubuntu 24.04, docker.io, 4 CPU / 8 GB; same | 1 full run, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu24.04](evidence/e2e-multipass/20261013T044132Z-ubuntu24.04) |
 
-The two reference runs are identical row by row. Every one of the 8 clean-VM runs matched
+The two reference runs are identical row by row. The complete records of one clean-VM run, written by the current
+harness with English names throughout, are in
+[evidence/e2e-multipass/…-ubuntu26.04/run](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04/run). Every one of the 8 clean-VM runs matched
 [lab/expected.tsv](lab/expected.tsv) in all 17 check results and all 39 measurement rows, the same rows the reference
 runs give; each VM also passed `install`, `reinstall`, `uninstall` and `cluster-down` with their residue checks. The
 VM runs used the committed tree named in each `source.txt`. The reference runs were recorded by the first version of

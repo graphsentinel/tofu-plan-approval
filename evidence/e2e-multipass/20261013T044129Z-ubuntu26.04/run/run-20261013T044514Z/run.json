@@ -1,0 +1,24 @@
+{
+  "run_id": "20261013T044514Z",
+  "started": "2026-10-13T04:45:15Z",
+  "pins": {
+    "tofu": "1.12.6",
+    "flux": "2.9.5",
+    "k3d": "v5.8.3",
+    "kubectl": "v1.35.0",
+    "k3s_image": "rancher/k3s:v1.37.0-k3s1",
+    "k8s_provider": "2.38.0"
+  },
+  "source_commit": "none",
+  "target": {
+    "ns": "t27",
+    "configmap": "t27",
+    "state_ns": "t27-state",
+    "state_secret": "tfstate-default-t27",
+    "kustomization": "t27"
+  },
+  "runner": {
+    "kind": "person-triggered-cli",
+    "note": "no OpenTofu controller"
+  }
+}

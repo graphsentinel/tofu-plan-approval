@@ -1,0 +1,7 @@
+✚ generating manifests
+✔ manifests build completed
+► installing components in flux-system namespace
+◎ verifying installation
+✔ kustomize-controller: deployment ready
+✔ source-controller: deployment ready
+✔ install finished

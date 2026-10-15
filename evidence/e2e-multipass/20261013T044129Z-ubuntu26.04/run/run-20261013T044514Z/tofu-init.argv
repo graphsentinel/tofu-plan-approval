@@ -1,0 +1,1 @@
+tofu init -input=false -upgrade=false -reconfigure -backend-config=config_path=/home/ubuntu/lab/runs/20261013T044514Z/kubeconfig

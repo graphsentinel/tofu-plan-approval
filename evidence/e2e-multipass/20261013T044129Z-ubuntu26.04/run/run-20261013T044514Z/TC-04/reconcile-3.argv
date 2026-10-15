@@ -1,0 +1,1 @@
+flux reconcile kustomization t27 -n flux-system --timeout=60s
