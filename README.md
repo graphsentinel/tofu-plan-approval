@@ -109,7 +109,7 @@ not touch the state, so neither mechanism had anything to detect.
 
 ### One page: what each mechanism covered
 
-In this pinned setup, for the four boundary tests:
+In this pinned setup, for the four boundary tests and the pre-apply check (TC-06):
 
 | Mechanism | TC-01 re-plan after approval | TC-02 saved plan after an out-of-band edit | TC-03 competing apply, then the earlier plan | TC-04 Flux after a clean apply |
 |---|---|---|---|---|
@@ -117,7 +117,7 @@ In this pinned setup, for the four boundary tests:
 | **Stale-plan check** | did not engage: the runner applied a fresh plan made after the edit | did not engage: the edit changed neither the state's serial nor its lineage | **engaged**: plan saved at serial 4, state at 5, *"Saved plan is stale"*; the object kept `C` | did not reject the approved plan; Flux's write came after the apply |
 | **State lock** | no contention: the second writer was not an OpenTofu run | no contention: the second writer was not an OpenTofu run | refused a concurrent runner in a separate step (*"Error acquiring the state lock"*); it is not what refused the earlier plan | no contention: the second writer was not an OpenTofu run |
 | **Flux server-side apply** (`ssa: Override`) | — | — | — | after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write `B → C` |
-| **Pre-apply check** ([gate/](gate), TC-06) | — | blocked the saved plan when a path it changes had been edited (`C` kept), let it through otherwise (`A → B`) | — | — |
+| **Pre-apply check** ([gate/](gate), TC-06) | — | blocked the saved plan when a path the plan changes had been edited (`C` kept), let it through otherwise (`A → B`) | — | not covered: Flux wrote after the apply |
 | **Left open** | what is applied is whatever the re-plan produces | without the check: a change to the live object between plan and apply. With it: changes the plan does not make (reported, not blocked), and any change between the check and the apply | — | a later change by another authorized writer; here Flux, `B → C` |
 
 Control (TC-05): with no second writer, the same paths give `A, B, B, B`, with no write by the second writer or Flux.
