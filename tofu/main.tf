@@ -24,10 +24,25 @@ variable "lock_fifo" {
   default     = ""
 }
 
+# TC-06 only: a plan that changes labels, and a plan that also creates a second object. With the defaults the
+# configuration is the one TC-01 to TC-05 use (labels = null is the same as no labels argument).
+variable "labels" {
+  description = "metadata.labels of the experiment object (TC-06)"
+  type        = map(string)
+  default     = {}
+}
+
+variable "extra" {
+  description = "also manage a second ConfigMap, t27/t27-extra (TC-06)"
+  type        = bool
+  default     = false
+}
+
 resource "kubernetes_config_map" "t27" {
   metadata {
     name      = "t27"
     namespace = "t27"
+    labels    = length(var.labels) > 0 ? var.labels : null
   }
 
   data = {
@@ -37,6 +52,17 @@ resource "kubernetes_config_map" "t27" {
   provisioner "local-exec" {
     when    = create
     command = var.lock_fifo == "" ? "true" : "cat ${var.lock_fifo} > /dev/null"
+  }
+}
+
+resource "kubernetes_config_map" "extra" {
+  count = var.extra ? 1 : 0
+  metadata {
+    name      = "t27-extra"
+    namespace = "t27"
+  }
+  data = {
+    value = "extra"
   }
 }
 

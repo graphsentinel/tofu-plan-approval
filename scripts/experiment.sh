@@ -3,7 +3,7 @@
 # The experiment harness.
 #
 #   scripts/experiment.sh TC-01 .. TC-06   one scenario
-#   scripts/experiment.sh all              four boundary tests, the control, and the TC-06 gate
+#   scripts/experiment.sh all              four boundary tests, the control, and the TC-06 gate (six sub-paths)
 #   scripts/experiment.sh clean            delete the lab's cluster and registry
 #
 # Every scenario starts from a FRESH cluster: leakage between paths is the
@@ -306,71 +306,80 @@ tc05(){ # Four single-writer sub-runs: the SAME phases, NO outside intervention.
   done
 }
 
-tc06(){ # TC-02 with a pre-apply drift gate, measured two ways, on two sub-paths:
-  #   drift: the second writer sets C after the plan is saved (TC-02's situation)
-  #   clean: no second writer (does the gate let the approved plan through?)
+second_writer_meta(){ # second_writer_meta <tc-dir> <tc> annotate|label <key=value>
+  local kc="$RUN_ROOT/kubeconfig.second-writer"
+  [ -s "$kc" ] || { echo "WARNING: no second-writer kubeconfig, intervention skipped" >&2; return 1; }
+  record "$1/second-writer" kubectl --kubeconfig "$kc" -n "$NS" "$3" configmap "$CM" "$4" --overwrite || true
+  event "$2" "intervention" "system:serviceaccount:$NS:second-writer" "$1/second-writer.stdout" "$3 $4"
+}
+
+tc06_path(){ # tc06_path <sub> <intervention: none | value | annotation | label> <plan options...>
+  # One sub-path of TC-06 on a fresh cluster: start at A, save and approve a plan, let the second writer act (or
+  # not), then run the three gates and apply the saved plan only when gate 3 says so.
+  local sub="$1" how="$2"; shift 2
+  local d="$RUN_ROOT/TC-06/$sub" drift conflicts rc
+  mkdir -p "$d"
+  scenario_cluster "TC-06" || return 1; actors_setup
+  export KUBECONFIG="$(kubeconfig_path)"
+  tofu_prepare || return 1
+  ( cd "$ROOT/tofu" && record "$d/bootstrap" tofu apply -input=false -auto-approve -var "value=A" ) || true
+  object_capture "$d" "00-start"; state_capture "$d" "00-start"
+  ( cd "$ROOT/tofu" && record "$d/reviewed-plan" tofu plan -input=false "$@" -out "$d/reviewed.tfplan" ) || true
+  ( cd "$ROOT/tofu" && tofu show -json "$d/reviewed.tfplan" > "$d/reviewed.plan.json" 2>/dev/null ) || : > "$d/reviewed.plan.json"
+  approval_write "$d" "plan_artifact" "reviewed.tfplan" "$d/reviewed.tfplan"
+  case "$how" in
+    value)      second_writer_write "$d" TC-06 C ;;
+    annotation) second_writer_meta "$d" TC-06 annotate note=second-writer ;;
+    label)      second_writer_meta "$d" TC-06 label team=c ;;
+  esac
+  object_capture "$d" "10-before-gate"; state_capture "$d" "10-before-gate"
+
+  ( cd "$ROOT/tofu" && record "$d/gate-exitcode" tofu plan -input=false -refresh-only -detailed-exitcode "$@" ) || true
+  ( cd "$ROOT/tofu" && record "$d/gate-json" tofu plan -input=false -refresh-only -json "$@" ) || true
+  drift=$(jq -s '[.[] | select(.type == "resource_drift")] | length' "$d/gate-json.stdout" 2>/dev/null)
+  case "$drift" in ''|*[!0-9]*) drift=UNKNOWN ;; esac
+  printf '%s\n' "$drift" > "$d/gate.drift-count"
+  # gate 3 is the published check itself, run as a pipeline would run it
+  ( cd "$ROOT/tofu" && export GATE_DIR="$d/gate-files" && record "$d/gate" "$ROOT/gate/plan-drift-gate.sh" "$d/reviewed.tfplan" "$@" ) || true
+  cp "$d/gate-files/refresh.json" "$d/refresh.plan.json" 2>/dev/null || : > "$d/refresh.plan.json"
+  rc=$(cat "$d/gate.rc" 2>/dev/null)
+  conflicts=$(jq -r '.conflicts | length' "$d/gate.stdout" 2>/dev/null)
+  case "$conflicts" in ''|*[!0-9]*) conflicts=UNKNOWN ;; esac
+  printf '%s\n' "$conflicts" > "$d/gate.planned-field-drift"
+  if [ "$rc" = 0 ] && [ "$(cat "$d/reviewed-plan.rc" 2>/dev/null)" = 0 ]; then
+    printf 'apply\n' > "$d/gate.decision"
+    ( cd "$ROOT/tofu" && record "$d/apply" tofu apply -input=false "$d/reviewed.tfplan" ) || true
+  else
+    # 1: a planned path changed; 2 or anything else: the check could not decide. Either way: not applied.
+    printf 'block\n' > "$d/gate.decision"
+  fi
+  event TC-06 "gate" "harness" "$d/gate.decision" "sub=$sub drift=$drift conflicts=$conflicts gate-exit=$rc decision=$(cat "$d/gate.decision")"
+  object_capture "$d" "20-after-gate"; state_capture "$d" "20-after-gate"
+  kubectl get --raw "/api/v1/namespaces/$NS/configmaps/t27-extra" > "$d/extra.20-after-gate.json" 2>/dev/null \
+    || echo '{"absent":true}' > "$d/extra.20-after-gate.json"
+  audit_capture "TC-06" 2>/dev/null || true
+}
+
+tc06(){ # TC-02 with a pre-apply drift gate, on six sub-paths, each on a fresh cluster:
+  #   drift          plan A -> B; the second writer sets C                    (TC-02's situation: block)
+  #   clean          plan A -> B; no second writer                            (apply)
+  #   unrelated      plan A -> B; the second writer adds an annotation        (not a path the plan changes: apply)
+  #   labels-drift   plan adds label team=b; the second writer sets team=c    (a nested planned path: block)
+  #   labels-clean   plan adds label team=b; no second writer                 (apply, although the provider reads
+  #                                                                             empty annotations back as {})
+  #   create-clean   plan A -> B and creates t27/t27-extra; no second writer  (a create is not drift: apply)
   # Gate 1, exit code: `tofu plan -refresh-only -detailed-exitcode` (0 none, 2 changes). Recorded only.
   # Gate 2, drift report: `tofu plan -refresh-only -json`, counting resource_drift messages. Recorded only.
-  # Gate 3, the decision: a saved refresh-only plan (`-out`, then `tofu show -json`), looking for drift only in the
-  #   attributes the reviewed plan changes. Gates 1 and 2 react to any attribute the provider reports as changed
-  #   (with this provider: binary_data null -> {} on every refresh), so they cannot tell the two sub-paths apart.
+  # Gate 3, the decision: gate/plan-drift-gate.sh, which compares the live values with the values the reviewer saw,
+  #   only at the paths the reviewed plan changes (exit 0 apply, 1 block, 2 could not decide = block).
   # No gate writes state: a refresh-only plan is not applied.
-  local top="$RUN_ROOT/TC-06"; mkdir -p "$top"
-  local sub d drift fdrift
-  for sub in drift clean; do
-    d="$top/$sub"; mkdir -p "$d"
-    scenario_cluster "TC-06" || return 1; actors_setup
-    export KUBECONFIG="$(kubeconfig_path)"
-    tofu_prepare || return 1
-    ( cd "$ROOT/tofu" && record "$d/bootstrap" tofu apply -input=false -auto-approve -var "value=A" ) || true
-    object_capture "$d" "00-start"; state_capture "$d" "00-start"
-    ( cd "$ROOT/tofu" && record "$d/reviewed-plan" tofu plan -input=false -var "value=B" -out "$d/reviewed.tfplan" ) || true
-    ( cd "$ROOT/tofu" && tofu show -json "$d/reviewed.tfplan" > "$d/reviewed.plan.json" 2>/dev/null ) || : > "$d/reviewed.plan.json"
-    approval_write "$d" "plan_artifact" "reviewed.tfplan" "$d/reviewed.tfplan"
-    [ "$sub" = drift ] && second_writer_write "$d" TC-06 C
-    object_capture "$d" "10-before-gate"; state_capture "$d" "10-before-gate"
-
-    ( cd "$ROOT/tofu" && record "$d/gate-exitcode" tofu plan -input=false -refresh-only -detailed-exitcode -var "value=B" ) || true
-    ( cd "$ROOT/tofu" && record "$d/gate-json" tofu plan -input=false -refresh-only -json -var "value=B" ) || true
-    drift=$(jq -s '[.[] | select(.type == "resource_drift")] | length' "$d/gate-json.stdout" 2>/dev/null)
-    case "$drift" in ''|*[!0-9]*) drift=UNKNOWN ;; esac
-    printf '%s\n' "$drift" > "$d/gate.drift-count"
-    ( cd "$ROOT/tofu" && record "$d/gate-refresh-plan" tofu plan -input=false -refresh-only -var "value=B" -out "$d/refresh.tfplan" ) || true
-    ( cd "$ROOT/tofu" && tofu show -json "$d/refresh.tfplan" > "$d/refresh.plan.json" 2>/dev/null ) || : > "$d/refresh.plan.json"
-    # resources the reviewed plan changes, and for each the top-level attributes whose planned value differs from the
-    # value it was planned from (present before, after, or both); drift counts when one of those attributes changed
-    # outside OpenTofu. Fails closed: a failed or errored plan, an empty or unreadable plan JSON, an action other
-    # than update, or any value unknown until apply is an error (jq exits non-zero), which makes the result UNKNOWN
-    # and the decision block; so is a failed reviewed or refresh-only plan command.
-    fdrift=$(jq -n --slurpfile r "$d/reviewed.plan.json" --slurpfile f "$d/refresh.plan.json" '
-      if ($r | length) != 1 or ($f | length) != 1 or ($r[0].format_version | type) != "string"
-         or ($f[0].format_version | type) != "string" or ($r[0].resource_changes | type) != "array"
-      then error("plan JSON missing or unreadable")
-      elif ($r[0].errored // false) != false or ($f[0].errored // false) != false then error("errored plan")
-      else . end
-      | [ $r[0].resource_changes[] | select(.change.actions != ["no-op"]) | . as $c
-        | if $c.change.actions != ["update"] then error("unsupported action \($c.change.actions) at \($c.address)") else . end
-        | if [ $c.change.after_unknown // {} | .. | select(. == true) ] != []
-          then error("value unknown until apply at \($c.address)") else . end
-        | ([ ($c.change.before // {} | keys), ($c.change.after // {} | keys) ] | add | unique) as $keys
-        | [ $keys[] | select($c.change.before[.] != $c.change.after[.]) ] as $planned
-        | [ $f[0].resource_drift // [] | .[] | select(.address == $c.address) ] as $drs
-        | select(any($drs[]; . as $dr | any($planned[]; $dr.change.before[.] != $dr.change.after[.]))) ]
-      | length' 2>/dev/null) || fdrift=UNKNOWN
-    [ "$(cat "$d/reviewed-plan.rc" 2>/dev/null)" = 0 ] && [ "$(cat "$d/gate-refresh-plan.rc" 2>/dev/null)" = 0 ] || fdrift=UNKNOWN
-    case "$fdrift" in ''|*[!0-9]*) fdrift=UNKNOWN ;; esac
-    printf '%s\n' "$fdrift" > "$d/gate.planned-field-drift"
-    if [ "$fdrift" = 0 ]; then
-      printf 'apply\n' > "$d/gate.decision"
-      ( cd "$ROOT/tofu" && record "$d/apply" tofu apply -input=false "$d/reviewed.tfplan" ) || true
-    else
-      # drift in a planned attribute, or the result could not be computed: the saved plan is not applied
-      printf 'block\n' > "$d/gate.decision"
-    fi
-    event TC-06 "gate" "harness" "$d/gate.decision" "sub=$sub drift=$drift planned-field-drift=$fdrift decision=$(cat "$d/gate.decision")"
-    object_capture "$d" "20-after-gate"; state_capture "$d" "20-after-gate"
-    audit_capture "TC-06" 2>/dev/null || true
-  done
+  mkdir -p "$RUN_ROOT/TC-06"
+  tc06_path drift        value      -var "value=B"                       || return 1
+  tc06_path clean        none       -var "value=B"                       || return 1
+  tc06_path unrelated    annotation -var "value=B"                       || return 1
+  tc06_path labels-drift label      -var "value=A" -var 'labels={team="b"}' || return 1
+  tc06_path labels-clean none       -var "value=A" -var 'labels={team="b"}' || return 1
+  tc06_path create-clean none       -var "value=B" -var "extra=true"     || return 1
 }
 
 # ------------------------------------------------------------------

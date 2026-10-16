@@ -1,6 +1,7 @@
 # Expected results of every run (scripts/summary.py compares each run of 'scripts/lab.sh test' with this file).
 # Source: the two reference runs of 2026-09-29 (evidence/reference), identical row by row; the TC-06 rows and checks
-# (added 2026-10-15) from the first TC-06 runs in a clean VM, which the reference runs predate.
+# (added 2026-10-15; six sub-paths and the gate/ check since 2026-10-16) from TC-06 runs in a clean VM, which the
+# reference runs predate.
 # kind=check: the result scripts/verify.sh reports; a pair check may be N/A in the first run of a fresh machine.
 # kind=metric: a row of scripts/collect.py, derived from the raw records without the checks.
 kind	test	name	expected
@@ -19,6 +20,8 @@ check	-	EV-012	PASSED
 check	-	EV-014	PASSED
 check	-	EV-019	PASSED
 check	-	EV-020	PASSED
+check	-	EV-021	PASSED
+check	-	EV-022	PASSED
 check	-	EV-015	MANUAL
 check	-	EV-016	MANUAL
 check	-	EV-017	MANUAL
@@ -65,7 +68,10 @@ metric	TC-04	protection_engaged	no
 metric	TC-06	drift.value_before_gate	C
 metric	TC-06	drift.gate1_refresh_only_exit	2
 metric	TC-06	drift.gate2_drift_reports	1
+metric	TC-06	drift.gate3_exit	1
 metric	TC-06	drift.gate3_planned_field_drift	1
+metric	TC-06	drift.gate3_conflicts	data.value
+metric	TC-06	drift.gate3_unplanned_drift	metadata[0].resource_version
 metric	TC-06	drift.decision	block
 metric	TC-06	drift.apply_exit	not-run
 metric	TC-06	drift.value_after_gate	C
@@ -74,9 +80,58 @@ metric	TC-06	drift.drift_only_null_to_empty_map	no
 metric	TC-06	clean.value_before_gate	A
 metric	TC-06	clean.gate1_refresh_only_exit	2
 metric	TC-06	clean.gate2_drift_reports	1
+metric	TC-06	clean.gate3_exit	0
 metric	TC-06	clean.gate3_planned_field_drift	0
+metric	TC-06	clean.gate3_conflicts	none
+metric	TC-06	clean.gate3_unplanned_drift	none
 metric	TC-06	clean.decision	apply
 metric	TC-06	clean.apply_exit	0
 metric	TC-06	clean.value_after_gate	B
 metric	TC-06	clean.binary_data_drift	null->{}
 metric	TC-06	clean.drift_only_null_to_empty_map	yes
+metric	TC-06	unrelated.value_before_gate	A
+metric	TC-06	unrelated.gate1_refresh_only_exit	2
+metric	TC-06	unrelated.gate2_drift_reports	1
+metric	TC-06	unrelated.gate3_exit	0
+metric	TC-06	unrelated.gate3_planned_field_drift	0
+metric	TC-06	unrelated.gate3_conflicts	none
+metric	TC-06	unrelated.gate3_unplanned_drift	metadata[0].annotations,metadata[0].resource_version
+metric	TC-06	unrelated.decision	apply
+metric	TC-06	unrelated.apply_exit	0
+metric	TC-06	unrelated.value_after_gate	B
+metric	TC-06	unrelated.annotation_note_after	second-writer
+metric	TC-06	labels-drift.value_before_gate	A
+metric	TC-06	labels-drift.gate1_refresh_only_exit	2
+metric	TC-06	labels-drift.gate2_drift_reports	1
+metric	TC-06	labels-drift.gate3_exit	1
+metric	TC-06	labels-drift.gate3_planned_field_drift	1
+metric	TC-06	labels-drift.gate3_conflicts	metadata[0].labels.team
+metric	TC-06	labels-drift.gate3_unplanned_drift	metadata[0].labels,metadata[0].resource_version
+metric	TC-06	labels-drift.decision	block
+metric	TC-06	labels-drift.apply_exit	not-run
+metric	TC-06	labels-drift.value_after_gate	A
+metric	TC-06	labels-drift.label_team_after	c
+metric	TC-06	labels-clean.value_before_gate	A
+metric	TC-06	labels-clean.gate1_refresh_only_exit	2
+metric	TC-06	labels-clean.gate2_drift_reports	1
+metric	TC-06	labels-clean.gate3_exit	0
+metric	TC-06	labels-clean.gate3_planned_field_drift	0
+metric	TC-06	labels-clean.gate3_conflicts	none
+metric	TC-06	labels-clean.gate3_unplanned_drift	none
+metric	TC-06	labels-clean.decision	apply
+metric	TC-06	labels-clean.apply_exit	0
+metric	TC-06	labels-clean.value_after_gate	A
+metric	TC-06	labels-clean.label_team_after	b
+metric	TC-06	labels-clean.binary_data_drift	null->{}
+metric	TC-06	labels-clean.drift_only_null_to_empty_map	yes
+metric	TC-06	create-clean.value_before_gate	A
+metric	TC-06	create-clean.gate1_refresh_only_exit	2
+metric	TC-06	create-clean.gate2_drift_reports	1
+metric	TC-06	create-clean.gate3_exit	0
+metric	TC-06	create-clean.gate3_planned_field_drift	0
+metric	TC-06	create-clean.gate3_conflicts	none
+metric	TC-06	create-clean.gate3_unplanned_drift	none
+metric	TC-06	create-clean.decision	apply
+metric	TC-06	create-clean.apply_exit	0
+metric	TC-06	create-clean.value_after_gate	B
+metric	TC-06	create-clean.extra_value_after	extra

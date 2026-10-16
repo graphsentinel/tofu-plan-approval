@@ -1,21 +1,23 @@
 # What does plan approval guarantee? OpenTofu, shared state and a second writer
 
 A Kubernetes lab that asks what approving an OpenTofu plan actually binds when a second writer reaches the same
-object, and whether a check before the apply can stop it. One ConfigMap field goes through four boundary tests, a
-sole-writer control and a pre-apply drift gate, on pinned versions of
+object, and what a check before the apply can do about it. One ConfigMap field goes through four boundary tests, a
+sole-writer control and a pre-apply check ([gate/](gate)) on six paths, on pinned versions of
 OpenTofu, its Kubernetes provider and Flux, on a local k3d cluster that anyone can rebuild from zero with a few
 commands ([Quickstart](#quickstart)).
 
 **Result, in this pinned setup: exactly one of the four is stopped, by the saved plan's stale-plan check
-("Saved plan is stale"), not by the state lock. A pre-apply gate that looks for drift only in the fields the plan
-changes stopped the out-of-band edit and let a clean plan through; the obvious gates (the refresh-only exit code or
-its drift report) flagged the clean plan too.**
+("Saved plan is stale"), not by the state lock. A pre-apply check that compares the live values with the values in
+the approved plan, only at the paths the plan changes, blocked the plan after a conflicting edit (a field, a label)
+and let it through otherwise (no edit, an unrelated annotation, a plan that also creates an object); the obvious
+gates (the refresh-only exit code or its drift report) flagged every one of the six paths.**
 
 Project page: https://graphsentinel.github.io/tofu-plan-approval/
 
 - [The problem](#the-problem)
 - [What is measured](#what-is-measured)
 - [Results](#results)
+- [The pre-apply check](#the-pre-apply-check)
 - [Quickstart](#quickstart)
 - [How-to](#how-to)
 - [Troubleshooting](#troubleshooting)
@@ -61,7 +63,7 @@ Flux's service account.
 | **TC-03** | A competing apply advances the shared state, then the earlier saved plan is applied | the saved plan file |
 | **TC-04** | Apply the approved plan cleanly, then let Flux reconcile a source that says `C` | the saved plan file |
 | **TC-05** | The same four paths with no second writer | control |
-| **TC-06** | TC-02 with a pre-apply drift gate, once with the second writer (drift) and once without (clean) | the saved plan file, applied only if the gate allows it |
+| **TC-06** | TC-02 with the pre-apply check, on six paths: a conflicting edit of the field or of a planned label, no edit, an unrelated annotation, no edit with a label plan, a plan that also creates an object | the saved plan file, applied only if the check allows it |
 
 Recorded per path: what the approval was bound to, planned actions, state serial and lineage, the API writes the
 audit log captured (with request and response bodies for the target object), field managers, final field values,
@@ -113,8 +115,8 @@ In this pinned setup, for the four boundary tests:
 | **Stale-plan check** | did not engage: the runner applied a fresh plan made after the edit | did not engage: the edit changed neither the state's serial nor its lineage | **engaged**: plan saved at serial 4, state at 5, *"Saved plan is stale"*; the object kept `C` | did not reject the approved plan; Flux's write came after the apply |
 | **State lock** | no contention: the second writer was not an OpenTofu run | no contention: the second writer was not an OpenTofu run | refused a concurrent runner in a separate step (*"Error acquiring the state lock"*); it is not what refused the earlier plan | no contention: the second writer was not an OpenTofu run |
 | **Flux server-side apply** (`ssa: Override`) | — | — | — | after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write `B → C` |
-| **Pre-apply gate on planned fields** (TC-06) | — | blocked the saved plan when a planned field had changed (`C` kept), let it through otherwise (`A → B`) | — | — |
-| **Left open** | what is applied is whatever the re-plan produces | without a gate: a change to the live object between plan and apply. With the TC-06 gate: changes to fields the plan does not change, and any change between the gate and the apply | — | a later change by another authorized writer; here Flux, `B → C` |
+| **Pre-apply check** ([gate/](gate), TC-06) | — | blocked the saved plan when a path it changes had been edited (`C` kept), let it through otherwise (`A → B`) | — | — |
+| **Left open** | what is applied is whatever the re-plan produces | without the check: a change to the live object between plan and apply. With it: changes the plan does not make (reported, not blocked), and any change between the check and the apply | — | a later change by another authorized writer; here Flux, `B → C` |
 
 Control (TC-05): with no second writer, the same paths give `A, B, B, B`, with no write by the second writer or Flux.
 
@@ -125,34 +127,35 @@ refused and TC-02 was not.
 Three checks this implies for a pipeline:
 
 1. Does the approval bind a configuration revision or the exact saved plan that will be applied?
-2. Does anything compare the live object with the reviewed plan before applying?
+2. Does anything compare the live object with the reviewed plan before applying? ([gate/](gate) does, for the paths
+   the plan changes: [The pre-apply check](#the-pre-apply-check).)
 3. Which other writers can change the same fields during or after the apply?
 
-### A pre-apply drift gate (TC-06)
+### The pre-apply check on six paths (TC-06)
 
-TC-06 repeats TC-02 and adds a check between approval and apply: an OpenTofu refresh-only plan, which reads the
-live object and compares it with the state without changing either, and a `jq` comparison of it with the reviewed
-plan. It runs twice, once after the second
-writer set `C` (drift) and once with no second writer (clean). Three ways of reading the refresh-only plan were
-recorded; only gate 3 decides.
+TC-06 repeats TC-02's setup and runs, between approval and apply, the check in [gate/](gate) as a pipeline would:
+`gate/plan-drift-gate.sh reviewed.tfplan -var ...` (how it works: [The pre-apply check](#the-pre-apply-check)). Each
+path starts at `A` on a fresh cluster; the plan is saved and approved; then the second writer acts, or not; then the
+check decides whether the saved plan is applied.
 
-| Gate | What it reads | drift path (field `C`) | clean path (field `A`) |
-|---|---|---|---|
-| 1 | exit code of `tofu plan -refresh-only -detailed-exitcode` | 2 | 2 |
-| 2 | `resource_drift` messages of `tofu plan -refresh-only -json` | 1 | 1 |
-| 3 | drift in the attributes the reviewed plan changes (`data`), from the saved refresh-only plan (`-out`, `tofu show -json`) | 1 → **blocked**; the field stays `C`, the state serial does not move | 0 → **applied**, `A → B` |
+| Path | Approved plan | Second writer, after approval | Check (gate 3) | Result |
+|---|---|---|---|---|
+| drift | `data.value` A → B | sets `data.value` to C | conflict at `data.value` → **blocked** | `C` kept; state serial unchanged |
+| clean | `data.value` A → B | — | **applied** | `B` |
+| unrelated | `data.value` A → B | adds an annotation | reported as drift outside the plan → **applied** | `B`; the annotation is still there after the apply |
+| labels-drift | adds label `team=b` | sets label `team=c` | conflict at `metadata[0].labels.team` → **blocked** | `team=c` kept; state serial unchanged |
+| labels-clean | adds label `team=b` | — | **applied** | `team=b` |
+| create-clean | `data.value` A → B and creates `t27/t27-extra` | — | **applied** (a create is not drift) | `B`, `t27-extra` created |
 
-Gates 1 and 2 reported drift on both paths, so blocking on either would have rejected the clean plan too. In the
-refresh-only plan, `binary_data`, `metadata.annotations` and `metadata.labels` go from `null` in the state to `{}`
-as read from the cluster, and the plan reports that as a change made outside OpenTofu. Gate 3 looks only at the
-attributes the reviewed plan changes and told the two paths apart.
+Two obvious gates were recorded on the same paths for comparison: gate 1, the exit code of
+`tofu plan -refresh-only -detailed-exitcode`, was 2 on all six paths, and gate 2, the `resource_drift` messages of
+`tofu plan -refresh-only -json`, counted 1 on all six. Either would have blocked every plan, the clean ones included.
+The reason is in the refresh-only plan: `binary_data`, `metadata.annotations` and `metadata.labels` go from `null` in
+the state to `{}` as read from the cluster (the configuration sets none of them), and the plan reports that as a
+change made outside OpenTofu. The check compares only the paths the plan changes and counts an empty map as null.
 
-Limits: gate 3 sees drift only in the attributes the plan changes, compared as top-level attributes (`data` as a
-whole); a change in another attribute, or any change between the gate and the apply, is not covered. It addresses
-TC-02's situation; it does not stop TC-04, where Flux writes after the apply. It fails closed: a failed or errored plan,
-an empty or unreadable plan JSON, an action other than an update, or any value unknown until apply blocks the plan. It is a step in the
-harness (`tc06` in [scripts/experiment.sh](scripts/experiment.sh)), not a packaged tool; EV-019 and EV-020 check
-its two paths.
+EV-019 checks the drift and clean paths, EV-021 the other four, EV-020 the obvious gates on the clean path, and
+EV-022 runs the check's unit tests ([gate/test/run.sh](gate/test/run.sh)).
 
 ### Counting API calls and field changes separately (TC-04)
 
@@ -176,13 +179,52 @@ therefore orders the persisted writes by `resourceVersion` and compares each wit
 | "This holds on every Kubernetes distribution" | one distribution (k3s); not repeated on a second one (open limit below) |
 | "This holds for other OpenTofu, provider or Flux versions" | measured on the pinned versions only |
 | "The lock would have protected TC-02" | the second writer's edit did not change the state; there was no contention for a lock to resolve |
-| "A pre-apply gate closes the gap" | TC-06's gate covers only the attributes the plan changes, and nothing between the gate and the apply; gates 1 and 2 would have blocked the clean path too |
+| "The pre-apply check closes the gap" | it covers the paths the plan changes, not the inputs the plan was computed from, not changes the plan does not make (reported only), and nothing between the check and the apply; measured on one provider and one resource type |
 
 **Open limits.** (1) Independence from the distribution has not been established: everything ran on k3s. Repeating
 TC-02 and TC-04 on another distribution would broaden the evidence; a different result there would need
 investigation. (2) OpenTofu
 CLI and Flux's kustomize-controller are what was measured; no OpenTofu controller (for example tofu-controller)
 was run, and nothing here is claimed about one.
+
+## The pre-apply check
+
+[gate/plan-drift-gate.sh](gate/plan-drift-gate.sh) answers one question right before `tofu apply <plan>`: at every
+path the approved plan changes, is the live value still the value recorded in the plan? It uses only OpenTofu and
+`jq` (1.7 or later; it refuses a `jq` that compares large integers imprecisely); the comparison does not depend on the provider, for the plans it supports (below: what gives exit 2).
+
+```bash
+cd your-root-module
+tofu plan -out reviewed.tfplan -var-file=prod.tfvars    # reviewed and approved
+# ... later, in the apply job, with the same variables:
+/path/to/gate/plan-drift-gate.sh reviewed.tfplan -var-file=prod.tfvars && tofu apply reviewed.tfplan
+```
+
+Exit status: 0 apply; 1 block (a path the plan changes no longer holds the recorded value: re-plan and re-approve);
+2 could not decide, treat as block. The report on stdout lists addresses and paths, never values.
+
+How it decides ([gate/planned-drift.jq](gate/planned-drift.jq)):
+
+- It makes a refresh-only saved plan (`tofu plan -refresh-only -out`), which reads the live infrastructure without
+  changing it or the state, and compares its values with the reviewed plan's recorded `before` values.
+- Only the paths the plan changes count: for an update, the leaf paths whose value differs between `before` and
+  `after` (a map key or list element present on one side only counts), plus those unknown until apply; for a create,
+  delete or replace, the whole resource. A path through a list with more than one element stops at the list and
+  compares all of it, so a reordering cannot move a change onto another element.
+- An empty map or list counts as null on both sides; nothing else is normalised.
+- Changes outside the planned paths are reported (`unplanned_drift`, `drift_outside_plan`); `--strict` blocks on them.
+- It fails closed: unreadable, empty, errored or unsupported plans, a refresh made with different variables, options
+  that would narrow or unlock the refresh (only `-var`, `-var-file`, `-lock`, `-lock-timeout`, `-parallelism`,
+  `-no-color` and `-compact-warnings` pass), any `TF_CLI_ARGS*`, imports, moves and deposed objects all give exit 2.
+- A container above a planned path that changed kind (a map that became null, a key that disappeared) is a conflict;
+  so is a resource the plan updates, deletes or replaces that is no longer in the state.
+- The refresh runs in the current workspace and data directory: run the check where the apply will run.
+
+What it does not check: a write that lands between the check and the apply; the inputs the plan was computed from
+(data sources, other resources); values the provider does not read back (write-only, ephemeral); objects outside the
+state (a create does not prove the name is free); anything another writer does after the apply (TC-04). It was
+measured on one provider (hashicorp/kubernetes 2.38.0) and one resource type; the unit tests cover the rest of its
+logic on synthetic plans, 71 cases ([gate/test/run.sh](gate/test/run.sh), runs without tofu or a cluster).
 
 ## Quickstart
 
@@ -347,9 +389,11 @@ in `tofu/versions.tf` with `lab/.runtime/pins.env`. The k3s image is set by the 
 ```
 scripts/                  platform.sh (layer 1), lab.sh (layer 2), versions.env, experiment.sh, gitops-setup.sh,
                           lib.sh, verify.sh, collect.py, summary.py, check-versions.sh, multipass-e2e.sh
-checks/                   ledger.tsv, 01..15 automatic checks, 90..92 human judgement (always 77), target-writes.jq
+gate/                     the pre-apply check: plan-drift-gate.sh, planned-drift.jq, test/run.sh (unit tests)
+checks/                   ledger.tsv, 01..19 automatic checks, 90..92 human judgement (always 77), target-writes.jq
 lab/expected.tsv          the expected result of every check and measurement row
-tofu/                     the OpenTofu configuration (kubernetes backend, one ConfigMap) and its lock file
+tofu/                     the OpenTofu configuration (kubernetes backend, one ConfigMap; TC-06 adds labels and a
+                          second ConfigMap through variables) and its lock file
 gitops/                   Flux's source: the same ConfigMap with value C
 k3d/audit-policy.yaml     the API server's audit policy
 evidence/reference/       the two reference runs and their measurement rows

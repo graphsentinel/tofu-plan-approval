@@ -213,41 +213,68 @@ def collect(run):
         add("TC-05", "foreign_actor_writes", sum(1 for e in cm_calls(ev5) if e.get("verb") != "create"
                                                  and (SECOND_WRITER.search(actor(e)) or FLUX.search(actor(e)))))
 
-    # TC-06: TC-02 with a pre-apply drift gate, on a drift sub-path (second writer C) and a clean one (none).
-    # Absent from runs recorded before TC-06 existed: no rows then (the expected table checks their presence).
+    # TC-06: TC-02 with a pre-apply drift gate on six sub-paths (scripts/experiment.sh tc06). Absent from runs
+    # recorded before TC-06 existed: no rows then (the expected table checks their presence).
+    def norm(x):
+        if isinstance(x, dict):
+            return None if not x else {k: norm(v) for k, v in x.items()}
+        if isinstance(x, list):
+            return None if not x else [norm(v) for v in x]
+        return x
+
+    def meta(run, rel, field, key):
+        p = os.path.join(run, rel)
+        if not os.path.exists(p) or os.path.getsize(p) == 0:
+            return "MISSING"
+        return (load(p).get("metadata", {}).get(field) or {}).get(key, "none")
+
+    def report(run, rel, field):
+        p = os.path.join(run, rel)
+        if not os.path.exists(p) or os.path.getsize(p) == 0:
+            return "MISSING"
+        try:
+            items = load(p).get(field)
+        except ValueError:
+            return "UNREADABLE"
+        return ",".join(sorted(f"{x['path']}" for x in items)) or "none"
+
     if os.path.isdir(os.path.join(run, "TC-06")):
-        for sub in ("drift", "clean"):
+        for sub in ("drift", "clean", "unrelated", "labels-drift", "labels-clean", "create-clean"):
             b = f"TC-06/{sub}"
+            if not os.path.isdir(os.path.join(run, b)):
+                add("TC-06", f"{sub}.decision", "MISSING")
+                continue
             add("TC-06", f"{sub}.value_before_gate", value(run, f"{b}/object.10-before-gate.json"))
             add("TC-06", f"{sub}.gate1_refresh_only_exit", rc(run, f"{b}/gate-exitcode.rc"))
             add("TC-06", f"{sub}.gate2_drift_reports", rc(run, f"{b}/gate.drift-count"))
+            add("TC-06", f"{sub}.gate3_exit", rc(run, f"{b}/gate.rc"))
             add("TC-06", f"{sub}.gate3_planned_field_drift", rc(run, f"{b}/gate.planned-field-drift"))
+            add("TC-06", f"{sub}.gate3_conflicts", report(run, f"{b}/gate.stdout", "conflicts"))
+            add("TC-06", f"{sub}.gate3_unplanned_drift", report(run, f"{b}/gate.stdout", "unplanned_drift"))
             add("TC-06", f"{sub}.decision", rc(run, f"{b}/gate.decision"))
             add("TC-06", f"{sub}.apply_exit", rc(run, f"{b}/apply.rc") if os.path.exists(os.path.join(run, b, "apply.rc")) else "not-run")
             add("TC-06", f"{sub}.value_after_gate", value(run, f"{b}/object.20-after-gate.json"))
-            # the drift the provider reports on every refresh: binary_data null in state, {} after refresh
-            p2 = os.path.join(run, b, "refresh.plan.json")
-            bd = "MISSING"
-            if os.path.exists(p2):
-                d2 = [x for x in load(p2).get("resource_drift", []) if x.get("address") == "kubernetes_config_map.t27"]
-                bd = (f"{json.dumps(d2[0]['change']['before'].get('binary_data'))}->{json.dumps(d2[0]['change']['after'].get('binary_data'))}"
-                      if d2 else "none")
-            add("TC-06", f"{sub}.binary_data_drift", bd)
-            # are all of the object's reported differences empty maps read back where the state had null?
-            def norm(x):
-                if isinstance(x, dict):
-                    return None if not x else {k: norm(v) for k, v in x.items()}
-                if isinstance(x, list):
-                    return [norm(v) for v in x]
-                return x
-            only = "MISSING"
-            if os.path.exists(p2):
-                only = "none"
-                if d2:
-                    c = d2[0]["change"]
-                    if c["before"] != c["after"]:
-                        only = "yes" if norm(c["before"]) == norm(c["after"]) else "no"
-            add("TC-06", f"{sub}.drift_only_null_to_empty_map", only)
+            if sub.startswith("labels"):
+                add("TC-06", f"{sub}.label_team_after", meta(run, f"{b}/object.20-after-gate.json", "labels", "team"))
+            if sub == "unrelated":
+                add("TC-06", f"{sub}.annotation_note_after", meta(run, f"{b}/object.20-after-gate.json", "annotations", "note"))
+            if sub == "create-clean":
+                add("TC-06", f"{sub}.extra_value_after", value(run, f"{b}/extra.20-after-gate.json"))
+            if sub in ("drift", "clean", "labels-clean"):
+                # the drift the provider reports on every refresh: empty maps null in the state, {} after refresh
+                p2 = os.path.join(run, b, "refresh.plan.json")
+                bd = only = "MISSING"
+                if os.path.exists(p2) and os.path.getsize(p2) > 0:
+                    d2 = [x for x in load(p2).get("resource_drift", []) if x.get("address") == "kubernetes_config_map.t27"]
+                    bd = (f"{json.dumps(d2[0]['change']['before'].get('binary_data'))}->{json.dumps(d2[0]['change']['after'].get('binary_data'))}"
+                          if d2 else "none")
+                    only = "none"
+                    if d2:
+                        c = d2[0]["change"]
+                        if c["before"] != c["after"]:
+                            only = "yes" if norm(c["before"]) == norm(c["after"]) else "no"
+                add("TC-06", f"{sub}.binary_data_drift", bd)
+                add("TC-06", f"{sub}.drift_only_null_to_empty_map", only)
 
     # protection engaged: the earlier/approved intent was stopped AND the target kept its value
     for tc in ("TC-01", "TC-02"):

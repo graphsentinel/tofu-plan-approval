@@ -20,6 +20,7 @@
 #   N/A      scope=host checks with --reference (they test this machine, not the record);
 #            scope=tc06 checks with --reference (the reference runs were recorded before TC-06 existed);
 #            scope=pair checks when only one run exists (they compare two runs)
+#            (scope=static checks read no run and always run)
 #   GATE     EV-018 without --publish (it needs the published URL); with --publish a 77 there is a failure
 # ==================================================================
 set -uo pipefail

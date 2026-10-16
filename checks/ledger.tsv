@@ -3,6 +3,7 @@
 # kind:  auto = a script decides | manual = a human judgement, the script always exits 77 | gate = publication, run by verify.sh --publish
 # scope: run = reads only the recorded run | pair = needs two runs | host = also checks this machine (tools, cluster), not applicable to recorded evidence
 #        tc06 = reads TC-06, which the reference runs (2026-09-29) predate: not applicable to them
+#        static = reads no run (the gate's unit tests): runs everywhere, --reference included
 # exit:  0 = PASSED  1 = FAILED (the claim is false)  77 = COULD NOT RUN (never counted as passed)
 # Results are written by scripts/verify.sh to results/, never into this file.
 id	claim	script	kind	scope
@@ -19,7 +20,9 @@ EV-010	Two clean repetitions have equal normalized actions, rejection classes an
 EV-011	The experiment actors did not write outside the experiment namespaces, and the cluster was removed.	checks/11-isolation.sh	auto	host
 EV-012	TC-04: opportunity, API call, dry-run and field mutation counts are re-derived from the raw audit records; with zero completed opportunities the check exits 77.	checks/12-metrics.sh	auto	run
 EV-014	Decision gate: with valid controls, TC-02 or TC-04 supports the hypothesis (0 supported, 1 refuted, 77 inconclusive).	checks/14-hypothesis.sh	auto	pair
-EV-019	TC-06: a pre-apply gate that looks for drift only in the attributes the reviewed plan changes blocks the saved plan after a second writer changed such an attribute (field stays C, state unchanged) and lets it through when nobody did (A to B).	checks/16-drift-gate.sh	auto	tc06
+EV-019	TC-06: the pre-apply check (gate/plan-drift-gate.sh), comparing live values with the values the reviewer saw only at the paths the plan changes, blocks the saved plan after a second writer changed such a path (field stays C, state unchanged) and lets it through when nobody did (A to B).	checks/16-drift-gate.sh	auto	tc06
+EV-021	TC-06: the same check is not tied to TC-02's field: a change outside the planned paths (an annotation) does not block; a conflicting label blocks a plan that adds that label; the same plan passes with no second writer although the provider reads empty annotations back as {}; a plan with a create passes.	checks/18-gate-general.sh	auto	tc06
+EV-022	The pre-apply check gives the expected decision on synthetic plans (update, nested paths, unknown values, drift already reviewed, create, delete, replace, data sources, child modules) and fails closed on empty, unreadable or errored plans and unknown actions.	checks/19-gate-unit.sh	auto	static
 EV-020	TC-06: with no second writer, refresh-only -detailed-exitcode exits 2 and the refresh-only JSON reports drift, although no value changed: the provider stores empty maps as null and reads them back as {} on refresh; the obvious gates cannot tell the two paths apart.	checks/17-naive-gates.sh	auto	tc06
 EV-015	Whether the workflow failure is useful as a talk is a human judgement.	checks/90-talk-value.sh	manual	run
 EV-016	The approver identity and the origin of an independent manifest digest need a human check.	checks/91-record-origin.sh	manual	run

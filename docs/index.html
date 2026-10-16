@@ -82,10 +82,11 @@ td.ctl { color: var(--muted); font-weight: 600; }
     <p class="lede">Approving a plan feels like approving an outcome. This lab follows one ConfigMap field through four
       boundary tests in which a second writer reaches the same object, and records what the approval was actually
       bound to. In this pinned setup exactly one of the four was stopped, by the saved plan's stale-plan check, not by
-      the state lock. A pre-apply check that looks for drift only in the fields the plan changes stopped the
-      out-of-band edit and let a clean plan through.</p>
+      the state lock. A pre-apply check you can take to your own pipeline, which compares the live values with the
+      approved plan only at the paths the plan changes, blocked conflicting edits and let everything else through.</p>
     <div class="buttons">
       <a class="btn primary" href="https://github.com/graphsentinel/tofu-plan-approval">Repository</a>
+      <a class="btn" href="#gate">The pre-apply check</a>
       <a class="btn" href="https://github.com/graphsentinel/tofu-plan-approval#quickstart">Quickstart</a>
       <a class="btn" href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence">Evidence</a>
     </div>
@@ -125,8 +126,8 @@ td.ctl { color: var(--muted); font-weight: 600; }
           <td>OpenTofu writes <code>A → B</code>; Flux's service account then writes <code>B → C</code> on the same object</td><td class="no">no</td></tr>
         <tr><td class="tc">TC-05</td><td>The same paths with no second writer</td>
           <td><code>A, B, B, B</code>; no write by the second writer or Flux</td><td class="ctl">control</td></tr>
-        <tr><td class="tc">TC-06</td><td>TC-02 with a pre-apply drift gate: a refresh-only plan, read only for the fields the reviewed plan changes</td>
-          <td>with the edit: blocked, the object keeps <code>C</code>, state serial unchanged; without it: applied, <code>A → B</code></td><td class="yes">yes, by the gate</td></tr>
+        <tr><td class="tc">TC-06</td><td>TC-02 with the pre-apply check, on six paths</td>
+          <td>conflicting edits (the field, a planned label): blocked, the object keeps them; no edit, an unrelated annotation, a plan that also creates an object: applied</td><td class="yes">yes, by the check</td></tr>
       </tbody>
     </table>
   </div>
@@ -139,29 +140,39 @@ td.ctl { color: var(--muted); font-weight: 600; }
 </section>
 
 <section id="gate">
-  <h2>A pre-apply drift gate (TC-06)</h2>
-  <p>TC-06 repeats TC-02 and adds a check between approval and apply: an OpenTofu refresh-only plan, which reads the
-    live object and compares it with the state without changing either, and a <code>jq</code> comparison of it with the
-    reviewed plan. It runs once after the second writer
-    set <code>C</code> and once with no second writer. Three ways of reading the refresh-only plan were recorded; only
-    gate 3 decides.</p>
+  <h2>The pre-apply check</h2>
+  <p>One question, right before <code>tofu apply &lt;plan&gt;</code>: at every path the approved plan changes, is the
+    live value still the value recorded in the plan? <a href="https://github.com/graphsentinel/tofu-plan-approval/blob/main/gate/plan-drift-gate.sh"><code>gate/plan-drift-gate.sh</code></a>
+    uses only OpenTofu and <code>jq</code>; the comparison does not depend on the provider.</p>
+  <pre><code>tofu plan -out reviewed.tfplan -var-file=prod.tfvars     # reviewed and approved
+gate/plan-drift-gate.sh reviewed.tfplan -var-file=prod.tfvars &amp;&amp; tofu apply reviewed.tfplan
+# exit 0 apply, 1 block (re-plan and re-approve), 2 could not decide (treat as block)</code></pre>
+  <p>It makes a refresh-only saved plan, which reads the live infrastructure without changing it or the state, and
+    compares its values with the reviewed plan's recorded values, only at the paths the plan changes (leaf paths for
+    an update; the whole resource for a create, delete or replace). An empty map or list counts as null. It fails
+    closed on unreadable or errored plans, a refresh with different variables, options that narrow the refresh,
+    imports, moves and deposed objects. 71 unit tests on synthetic plans run without tofu or a cluster.</p>
+  <h3>Measured on six paths (TC-06)</h3>
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Gate</th><th>What it reads</th><th>With the edit (<code>C</code>)</th><th>Clean (<code>A</code>)</th></tr></thead>
+      <thead><tr><th>Path</th><th>Approved plan</th><th>Second writer, after approval</th><th>Check</th><th><code>-detailed-exitcode</code></th></tr></thead>
       <tbody>
-        <tr><td class="tc">1</td><td>exit code of <code>tofu plan -refresh-only -detailed-exitcode</code></td><td>2</td><td class="no">2</td></tr>
-        <tr><td class="tc">2</td><td><code>resource_drift</code> messages of <code>tofu plan -refresh-only -json</code></td><td>1</td><td class="no">1</td></tr>
-        <tr><td class="tc">3</td><td>drift in the attributes the reviewed plan changes, from the saved refresh-only plan</td><td class="yes">1 → blocked; the object keeps <code>C</code>, the state serial does not move</td><td class="yes">0 → applied, <code>A → B</code></td></tr>
+        <tr><td class="tc">drift</td><td><code>data.value</code> A → B</td><td>sets C</td><td class="yes">blocked at <code>data.value</code>; C kept</td><td class="no">2</td></tr>
+        <tr><td class="tc">clean</td><td><code>data.value</code> A → B</td><td>—</td><td class="yes">applied, B</td><td class="no">2</td></tr>
+        <tr><td class="tc">unrelated</td><td><code>data.value</code> A → B</td><td>adds an annotation</td><td class="yes">applied, B; reported as drift outside the plan</td><td class="no">2</td></tr>
+        <tr><td class="tc">labels-drift</td><td>adds label <code>team=b</code></td><td>sets <code>team=c</code></td><td class="yes">blocked at <code>metadata[0].labels.team</code>; c kept</td><td class="no">2</td></tr>
+        <tr><td class="tc">labels-clean</td><td>adds label <code>team=b</code></td><td>—</td><td class="yes">applied, <code>team=b</code></td><td class="no">2</td></tr>
+        <tr><td class="tc">create-clean</td><td>A → B and creates a second ConfigMap</td><td>—</td><td class="yes">applied; created</td><td class="no">2</td></tr>
       </tbody>
     </table>
   </div>
-  <p>Gates 1 and 2 reported drift on both paths, so blocking on either would have rejected the clean plan too: in the
-    refresh-only plan, <code>binary_data</code>, <code>metadata.annotations</code> and <code>metadata.labels</code> go
-    from <code>null</code> in the state to <code>{}</code> as read from the cluster, reported as a change made outside
-    OpenTofu. Gate 3 sees drift only in the attributes the plan changes (top-level, <code>data</code> as a whole); a
-    change elsewhere, or between the gate and the apply, is not covered, and it does not stop TC-04, where Flux writes
-    after the apply. It fails closed: a failed or errored plan, an unreadable plan JSON, an action other than an
-    update, or any value unknown until apply blocks the plan. It is a step in the lab's harness, not a packaged tool.</p>
+  <p>The exit code of <code>tofu plan -refresh-only -detailed-exitcode</code> was 2 on all six paths, and the JSON
+    drift report counted one change on all six: the provider stores empty maps as <code>null</code>
+    (<code>binary_data</code>, <code>metadata.annotations</code>, <code>metadata.labels</code>) and reads them back as
+    <code>{}</code>. A gate on either would block every plan.</p>
+  <p class="note">Not checked: a write between the check and the apply; the inputs the plan was computed from; values
+    the provider does not read back; objects outside the state; writes after the apply (TC-04). Measured on one provider
+    and one resource type.</p>
 </section>
 
 <section id="one-page">
@@ -174,8 +185,8 @@ td.ctl { color: var(--muted); font-weight: 600; }
         <tr><td><strong>Stale-plan check</strong></td><td>did not engage: the runner applied a fresh plan made after the edit</td><td class="no">did not engage: the edit changed neither the state's serial nor its lineage</td><td class="yes">engaged: plan saved at serial 4, state at 5, <code>Saved plan is stale</code>; the object kept <code>C</code></td><td>did not reject the approved plan; Flux's write came after the apply</td></tr>
         <tr><td><strong>State lock</strong></td><td>no contention: the second writer was not an OpenTofu run</td><td>no contention: the second writer was not an OpenTofu run</td><td>refused a concurrent runner in a separate step; it is not what refused the earlier plan</td><td>no contention: the second writer was not an OpenTofu run</td></tr>
         <tr><td><strong>Flux server-side apply</strong></td><td>—</td><td>—</td><td>—</td><td class="no">after the apply: 5 successful calls, 4 of them dry runs; 1 persisted write <code>B → C</code></td></tr>
-        <tr><td><strong>Pre-apply gate on planned fields</strong> (TC-06)</td><td>—</td><td class="yes">blocked the saved plan when a planned field had changed (<code>C</code> kept), let it through otherwise (<code>A → B</code>)</td><td>—</td><td>—</td></tr>
-        <tr><td><strong>Left open</strong></td><td>what is applied is whatever the re-plan produces</td><td>without a gate: a change to the live object between plan and apply. With the TC-06 gate: changes to fields the plan does not change, and any change between the gate and the apply</td><td>—</td><td>a later change by another authorized writer; here Flux, <code>B → C</code></td></tr>
+        <tr><td><strong>Pre-apply check</strong> (TC-06)</td><td>—</td><td class="yes">blocked the saved plan when a path it changes had been edited (<code>C</code> kept), let it through otherwise (<code>A → B</code>)</td><td>—</td><td>—</td></tr>
+        <tr><td><strong>Left open</strong></td><td>what is applied is whatever the re-plan produces</td><td>without the check: a change to the live object between plan and apply. With it: changes the plan does not make (reported, not blocked), and any change between the check and the apply</td><td>—</td><td>a later change by another authorized writer; here Flux, <code>B → C</code></td></tr>
       </tbody>
     </table>
   </div>
@@ -209,7 +220,7 @@ td.ctl { color: var(--muted); font-weight: 600; }
     <li>Not shown to be independent of k3s: a repeat on a second distribution has not been run.</li>
     <li>Nothing about OpenTofu controllers: none was run.</li>
     <li>Not a comparison of server-side apply options: TC-02 saw no conflict, which depends on how the provider writes.</li>
-    <li>Not a fix: TC-06's gate covers only the fields the plan changes, and nothing between the gate and the apply.</li>
+    <li>Not a complete fix: the check covers the paths the plan changes, not the plan's inputs, and nothing between the check and the apply.</li>
   </ul>
 </section>
 

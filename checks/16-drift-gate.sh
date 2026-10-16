@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # @trace EV-019 · TC-06
-# Claim: a pre-apply gate that looks for drift only in the attributes the reviewed plan changes stops the saved
-#        plan when a second writer changed such an attribute, and lets it through when nobody did.
+# Claim: the pre-apply check (gate/plan-drift-gate.sh), which compares the live values with the values the reviewer
+#        saw only at the paths the reviewed plan changes, stops the saved plan when a second writer changed such a
+#        path, and lets it through when nobody did.
 # Expected: drift path -> planned-field drift found, plan not applied, field stays C, state serial unchanged;
 #           clean path -> no planned-field drift, plan applied, field A -> B.  0 when both hold.
 . "$(dirname "$0")/../scripts/lib.sh"
