@@ -1,0 +1,1 @@
+tofu plan -input=false -var value=B -out /home/ubuntu/lab/runs/20261016T043602Z/TC-05/sub-03/p.tfplan

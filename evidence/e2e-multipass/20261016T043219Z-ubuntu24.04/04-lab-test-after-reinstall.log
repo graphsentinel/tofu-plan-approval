@@ -1,0 +1,18 @@
+
+==> run 1/1: scripts/experiment.sh all (about 10 minutes; each scenario recreates cluster t27)
+-- audit canary seen (6924 lines)
+-- creating k3d cluster (rancher/k3s:v1.37.0-k3s1) [TC-06]
+-- audit canary seen (8319 lines)
+== run finished: /home/ubuntu/lab/runs/20261016T044559Z
+  verify: exit 0 (passed=17  failed=0  could-not-run=0  manual=3  not-applicable=1)
+
+==> the platform cluster was up before the test: recreating it (empty)
+
+Runs of this test: 1 (expected 1): 20261016T044559Z
+
+| | expected | matching in every run |
+|---|---|---|
+| check results | 21 | 21 |
+| measurement rows | 109 | 109 |
+
+ALL CHECKS PASSED

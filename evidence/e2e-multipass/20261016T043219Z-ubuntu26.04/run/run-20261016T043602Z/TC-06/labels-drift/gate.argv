@@ -1,0 +1,1 @@
+/home/ubuntu/lab/gate/plan-drift-gate.sh /home/ubuntu/lab/runs/20261016T043602Z/TC-06/labels-drift/reviewed.tfplan -var value=A -var labels={team="b"}

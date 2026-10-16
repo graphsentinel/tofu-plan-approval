@@ -1,0 +1,48 @@
+{
+  "decision": "block",
+  "strict": false,
+  "conflicts": [
+    {
+      "address": "kubernetes_config_map.t27",
+      "path": "metadata[0].labels.team",
+      "path_array": [
+        "metadata",
+        0,
+        "labels",
+        "team"
+      ]
+    }
+  ],
+  "unplanned_drift": [
+    {
+      "address": "kubernetes_config_map.t27",
+      "path": "metadata[0].labels",
+      "path_array": [
+        "metadata",
+        0,
+        "labels"
+      ]
+    },
+    {
+      "address": "kubernetes_config_map.t27",
+      "path": "metadata[0].resource_version",
+      "path_array": [
+        "metadata",
+        0,
+        "resource_version"
+      ]
+    }
+  ],
+  "drift_outside_plan": [],
+  "checked": [
+    {
+      "address": "kubernetes_config_map.t27",
+      "actions": [
+        "update"
+      ],
+      "planned": [
+        "metadata[0].labels.team"
+      ]
+    }
+  ]
+}

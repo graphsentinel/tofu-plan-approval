@@ -1,0 +1,1 @@
+tofu apply -input=false /home/ubuntu/lab/runs/20261016T043602Z/TC-06/labels-clean/reviewed.tfplan

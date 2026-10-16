@@ -1,0 +1,59 @@
+
+==> namespaces t27, t27-state; service account second-writer (edit role)
+
+==> OpenTofu: ConfigMap t27/t27 = A, state in secret t27-state/tfstate-default-t27
+
+==> Flux 2.9.5 (source-controller, kustomize-controller); source gitops/ (value C), suspended
+✚ generating manifests
+✔ manifests build completed
+► installing components in flux-system namespace
+◎ verifying installation
+✔ kustomize-controller: deployment ready
+✔ source-controller: deployment ready
+✔ install finished
+► suspending kustomization t27 in flux-system namespace
+✔ kustomization suspended
+
+==> lab objects on cluster t27
+  ns  flux-system   Active   33s
+  ns  t27           Active   35s
+  ns  t27-state     Active   35s
+  ConfigMap t27/t27: data.value=A
+  flux kustomization  t27   1s          
+
+Installed. Walk a path by hand, for example TC-02:
+  export KUBECONFIG=/home/ubuntu/lab/lab/.runtime/kubeconfig PATH=/home/ubuntu/lab/bin:$PATH TF_VAR_kubeconfig=/home/ubuntu/lab/lab/.runtime/kubeconfig; cd /home/ubuntu/lab/tofu
+  tofu plan -var value=B -out=/tmp/b.tfplan                      # the plan you approve: A -> B
+  kubectl -n t27 patch configmap t27 --type=merge -p '{"data":{"value":"C"}}'   # a second writer
+  tofu apply /tmp/b.tfplan                                       # applies, C -> B; nothing noticed C
+  flux resume kustomization t27 -n flux-system                   # TC-04: Flux writes its C back
+
+==> OpenTofu destroy (ConfigMap t27/t27), Flux uninstall, the lab's namespaces and binding
+► deleting components in flux-system namespace
+✔ Deployment/flux-system/kustomize-controller deleted 
+✔ Deployment/flux-system/source-controller deleted 
+✔ Service/flux-system/source-controller deleted 
+✔ NetworkPolicy/flux-system/allow-egress deleted 
+✔ NetworkPolicy/flux-system/allow-scraping deleted 
+✔ NetworkPolicy/flux-system/allow-webhooks deleted 
+✔ ServiceAccount/flux-system/kustomize-controller deleted 
+✔ ServiceAccount/flux-system/source-controller deleted 
+✔ ClusterRole/crd-controller-flux-system deleted 
+✔ ClusterRole/flux-edit-flux-system deleted 
+✔ ClusterRole/flux-view-flux-system deleted 
+✔ ClusterRoleBinding/cluster-reconciler-flux-system deleted 
+✔ ClusterRoleBinding/crd-controller-flux-system deleted 
+► deleting toolkit.fluxcd.io finalizers in all namespaces
+✔ OCIRepository/flux-system/t27 finalizers deleted 
+✔ Kustomization/flux-system/t27 finalizers deleted 
+► deleting toolkit.fluxcd.io custom resource definitions
+✔ CustomResourceDefinition/buckets.source.toolkit.fluxcd.io deleted 
+✔ CustomResourceDefinition/externalartifacts.source.toolkit.fluxcd.io deleted 
+✔ CustomResourceDefinition/gitrepositories.source.toolkit.fluxcd.io deleted 
+✔ CustomResourceDefinition/helmcharts.source.toolkit.fluxcd.io deleted 
+✔ CustomResourceDefinition/helmrepositories.source.toolkit.fluxcd.io deleted 
+✔ CustomResourceDefinition/kustomizations.kustomize.toolkit.fluxcd.io deleted 
+✔ CustomResourceDefinition/ocirepositories.source.toolkit.fluxcd.io deleted 
+✔ Namespace/flux-system deleted 
+✔ uninstall finished
+removed; the cluster is still there (scripts/platform.sh cluster-down deletes it)

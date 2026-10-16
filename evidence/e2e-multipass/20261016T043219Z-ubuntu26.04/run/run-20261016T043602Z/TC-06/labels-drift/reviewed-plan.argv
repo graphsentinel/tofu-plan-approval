@@ -1,0 +1,1 @@
+tofu plan -input=false -var value=A -var labels={team="b"} -out /home/ubuntu/lab/runs/20261016T043602Z/TC-06/labels-drift/reviewed.tfplan

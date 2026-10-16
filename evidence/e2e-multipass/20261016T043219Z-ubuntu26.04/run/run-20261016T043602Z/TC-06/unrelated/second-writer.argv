@@ -1,0 +1,1 @@
+kubectl --kubeconfig /home/ubuntu/lab/runs/20261016T043602Z/kubeconfig.second-writer -n t27 annotate configmap t27 note=second-writer --overwrite

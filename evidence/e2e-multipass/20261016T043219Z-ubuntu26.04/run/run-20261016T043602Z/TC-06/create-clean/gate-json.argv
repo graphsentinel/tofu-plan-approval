@@ -1,0 +1,1 @@
+tofu plan -input=false -refresh-only -json -var value=B -var extra=true

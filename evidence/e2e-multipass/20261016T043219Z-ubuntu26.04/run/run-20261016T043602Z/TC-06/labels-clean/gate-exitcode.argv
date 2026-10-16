@@ -1,0 +1,1 @@
+tofu plan -input=false -refresh-only -detailed-exitcode -var value=A -var labels={team="b"}

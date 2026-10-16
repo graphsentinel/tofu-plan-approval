@@ -232,7 +232,7 @@ cd tofu-plan-approval
 scripts/platform.sh install      # missing Ubuntu packages; pinned tofu, flux, k3d, kubectl into bin/
 scripts/platform.sh cluster-up   # the lab's k3d cluster and registry
 RUNS=2 scripts/lab.sh all        # build, install, the full experiment twice, checks, summary</code></pre>
-  <p>On a 4-CPU, 8 GB VM one full run (six scenarios, each on a fresh cluster) took about 6 minutes. Without a
+  <p>On a 4-CPU, 8 GB VM one full run (TC-01 to TC-06, each on a fresh cluster) took about 8 minutes. Without a
     cluster, <code>scripts/verify.sh --reference</code> re-runs every check that reads a recorded run against the
     published reference runs. Details are in the <a href="https://github.com/graphsentinel/tofu-plan-approval#how-to">README</a>.</p>
 </section>
@@ -242,9 +242,9 @@ RUNS=2 scripts/lab.sh all        # build, install, the full experiment twice, ch
   <ul class="evidence">
     <li><a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/reference">Reference runs</a> (2026-09-29): two full runs with plans, state
       snapshots, audit logs and controller logs; identical row by row.</li>
-    <li><a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/e2e-multipass">Clean-VM runs</a> (2026-10-15): Ubuntu 26.04 (5 runs, then 1 after a
-      reinstall) and 24.04 (1 + 1), from zero; all 8 matched the expected 19 check results and 57 measurement rows, TC-01 to TC-06. One of them is
-      <a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/e2e-multipass/20261015T183707Z-ubuntu26.04/run">published in full</a>.</li>
+    <li><a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/e2e-multipass">Clean-VM runs</a> (2026-10-16): Ubuntu 26.04 (5 runs, then 1 after a
+      reinstall) and 24.04 (1 + 1), from zero; all 8 matched the expected 21 check results and 109 measurement rows, TC-06 on six paths. One of them is
+      <a href="https://github.com/graphsentinel/tofu-plan-approval/tree/main/evidence/e2e-multipass/20261016T043219Z-ubuntu26.04/run">published in full</a>.</li>
     <li><a href="https://github.com/graphsentinel/tofu-plan-approval/blob/main/checks/ledger.tsv">Claim ledger</a>: every claim and the script that tests it, with the exit
       code contract 0 = passed, 1 = false, 77 = could not run (never counted as passed).</li>
   </ul>

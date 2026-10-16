@@ -1,0 +1,18 @@
+{
+  "decision": "apply",
+  "strict": false,
+  "conflicts": [],
+  "unplanned_drift": [],
+  "drift_outside_plan": [],
+  "checked": [
+    {
+      "address": "kubernetes_config_map.t27",
+      "actions": [
+        "update"
+      ],
+      "planned": [
+        "metadata[0].labels.team"
+      ]
+    }
+  ]
+}

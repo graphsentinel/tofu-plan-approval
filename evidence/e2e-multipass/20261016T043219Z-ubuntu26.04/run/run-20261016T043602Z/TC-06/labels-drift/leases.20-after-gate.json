@@ -1,0 +1,27 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "coordination.k8s.io/v1",
+            "kind": "Lease",
+            "metadata": {
+                "creationTimestamp": "2026-10-16T04:43:08Z",
+                "labels": {
+                    "app.kubernetes.io/managed-by": "terraform",
+                    "tfstate": "true",
+                    "tfstateSecretSuffix": "t27",
+                    "tfstateWorkspace": "default"
+                },
+                "name": "lock-tfstate-default-t27",
+                "namespace": "t27-state",
+                "resourceVersion": "569",
+                "uid": "d005a7c7-7fcd-4f7d-981b-a96d8fad12a0"
+            },
+            "spec": {}
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}

@@ -1,0 +1,37 @@
+{
+  "decision": "apply",
+  "strict": false,
+  "conflicts": [],
+  "unplanned_drift": [
+    {
+      "address": "kubernetes_config_map.t27",
+      "path": "metadata[0].annotations",
+      "path_array": [
+        "metadata",
+        0,
+        "annotations"
+      ]
+    },
+    {
+      "address": "kubernetes_config_map.t27",
+      "path": "metadata[0].resource_version",
+      "path_array": [
+        "metadata",
+        0,
+        "resource_version"
+      ]
+    }
+  ],
+  "drift_outside_plan": [],
+  "checked": [
+    {
+      "address": "kubernetes_config_map.t27",
+      "actions": [
+        "update"
+      ],
+      "planned": [
+        "data.value"
+      ]
+    }
+  ]
+}

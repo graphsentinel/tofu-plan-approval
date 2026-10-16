@@ -1,0 +1,24 @@
+{
+    "apiVersion": "v1",
+    "data": {
+        "tfstate": "H4sIAAAAAAAA/2RSS4+jMAy+78/wObSF8lqkOazmvNe9dCpkwNCokKDEQaqq/PdV+mRnb8Ym/l6+wkLGSq2gSgUwGYO9NlP96kK8iZNNDgIsGYkjVJmAUSrCgcKUcFdQtouSFNuoLJo06vssjvq8xF3b7wqKCxCgHc+OLVRXWHB0tCrgEwTwZQ6lZSPVAN4LMGS1My1ZqA5XmHQX5hMqHKh7Pzi7howiJlu3WvVyqCecQYDCKYw5CeCz0YvsyED1Kg9fYGiQls1lo2dSrHu30WbYntCeZKvNvH2v/oIjCJDKMqonIdueaMK3TTsByGxk45huMhup0FzqDhmhunoBj2ol2wuQ3Z3l9s5UTpNjbEaCqsfRkoCJGO8vD1dApTQjS63sfedAigwy1Q+98Go9SY3Y0Pj4+x9TwoedsX13no6vss/KEgS4G8u8TYt9kWCEeVpEabzPo/JnXEZJ3hdlts86TBLwRx8ORVnJcqF6bcnhGJKQC3KAbNQf2/z6+AiiO1Is+RLMwVmu4JcYBJylCvCft3h//5/udyH+vbH+nlLsj/4ooD1Re64NWTeGm1RuHP2PvwEAAP//AhFmdAoDAAA="
+    },
+    "kind": "Secret",
+    "metadata": {
+        "annotations": {
+            "encoding": "gzip"
+        },
+        "creationTimestamp": "2026-10-16T04:37:29Z",
+        "labels": {
+            "app.kubernetes.io/managed-by": "terraform",
+            "tfstate": "true",
+            "tfstateSecretSuffix": "t27",
+            "tfstateWorkspace": "default"
+        },
+        "name": "tfstate-default-t27",
+        "namespace": "t27-state",
+        "resourceVersion": "589",
+        "uid": "6937fdf4-bbac-439e-a1d8-d837fe184687"
+    },
+    "type": "Opaque"
+}
