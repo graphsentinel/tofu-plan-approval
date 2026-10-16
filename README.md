@@ -74,14 +74,16 @@ and the exit code plus rejection class of each recorded command. Every scenario 
 | Source | Stack | Runs | Where |
 |---|---|---|---|
 | Reference runs, 2026-09-29 | workstation, Docker; the pinned versions | 2 full runs (TC-01…TC-05 each; recorded before TC-06 existed) | [evidence/reference](evidence/reference) |
-| Clean VM, 2026-10-13 | Ubuntu 26.04, docker.io, 4 CPU / 8 GB; this repository's quickstart from zero | 5 full runs, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu26.04](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04) |
-| Clean VM, 2026-10-13 | Ubuntu 24.04, docker.io, 4 CPU / 8 GB; same | 1 full run, then 1 more after `reinstall` | [evidence/e2e-multipass/…-ubuntu24.04](evidence/e2e-multipass/20261013T044132Z-ubuntu24.04) |
+| Clean VM, 2026-10-15 | Ubuntu 26.04, docker.io, 4 CPU / 8 GB; this repository's quickstart from zero | 5 full runs (TC-01…TC-06), then 1 more after `reinstall` | [evidence/e2e-multipass/…T183707Z-ubuntu26.04](evidence/e2e-multipass/20261015T183707Z-ubuntu26.04) |
+| Clean VM, 2026-10-15 | Ubuntu 24.04, docker.io, 4 CPU / 8 GB; same | 1 full run (TC-01…TC-06), then 1 more after `reinstall` | [evidence/e2e-multipass/…T183710Z-ubuntu24.04](evidence/e2e-multipass/20261015T183710Z-ubuntu24.04) |
+| Clean VM, 2026-10-13 | Ubuntu 26.04 and 24.04, same; before TC-06 existed | 5 + 1 and 1 + 1 full runs (TC-01…TC-05) | [26.04](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04), [24.04](evidence/e2e-multipass/20261013T044132Z-ubuntu24.04) |
 
-The two reference runs are identical row by row. The complete records of one clean-VM run, written by the current
-harness with English names throughout, are in
-[evidence/e2e-multipass/…-ubuntu26.04/run](evidence/e2e-multipass/20261013T044129Z-ubuntu26.04/run). Every one of the 8 clean-VM runs matched
-[lab/expected.tsv](lab/expected.tsv) as it stood then, in all 17 check results and all 39 measurement rows, the same
-rows the reference runs give; each VM also passed `install`, `reinstall`, `uninstall` and `cluster-down` with their residue checks. The
+The two reference runs are identical row by row. The complete records of one clean-VM run, TC-01 to TC-06, written
+by the current harness with English names throughout, are in
+[evidence/e2e-multipass/…T183707Z-ubuntu26.04/run](evidence/e2e-multipass/20261015T183707Z-ubuntu26.04/run). Every
+one of the 8 clean-VM runs of 2026-10-15 matched [lab/expected.tsv](lab/expected.tsv) in all 19 check results and all
+57 measurement rows; their TC-01 to TC-05 rows are the rows the reference runs give. The 8 runs of 2026-10-13, before
+TC-06, matched the 17 check results and 39 measurement rows expected then. Each VM also passed `install`, `reinstall`, `uninstall` and `cluster-down` with their residue checks. The
 VM runs used the committed tree named in each `source.txt`. The reference runs were recorded by the first version of
 this harness, before its file names were translated to English;
 [evidence/reference/README.md](evidence/reference/README.md) lists the renames and what was masked.
@@ -199,7 +201,7 @@ If `install` added you to the `docker` group, the next commands pick the group u
 `sg docker`). `scripts/lab.sh all` ends with the number of check results and measurement rows matching
 [lab/expected.tsv](lab/expected.tsv) and either `ALL CHECKS PASSED` or the list of differences (exit status 1). The
 table is also written to `lab/.runtime/summary.md`. On a 4-CPU, 8 GB Ubuntu 26.04 VM, `install` plus `cluster-up`
-took 98 s and one full run (then five scenarios, each on a fresh cluster, with its checks) about 5 minutes (the step
+took about 2 minutes and one full run (six scenarios, each on a fresh cluster, with its checks) about 6 minutes (the step
 times are in each VM's `host.log` under [evidence/e2e-multipass](evidence/e2e-multipass)). `all` finishes with an
 empty platform cluster: run `scripts/lab.sh install` again before walking through a path by hand.
 

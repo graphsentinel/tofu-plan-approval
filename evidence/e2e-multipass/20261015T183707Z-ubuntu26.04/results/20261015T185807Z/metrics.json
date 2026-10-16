@@ -1,0 +1,16 @@
+{
+  "opportunities": 3,
+  "calls": 6,
+  "flux_calls": 5,
+  "flux_dry_runs": 4,
+  "flux_writes": 1,
+  "mutations": 2,
+  "flux_mutations": 1,
+  "flux_transitions": "B->C",
+  "incomplete": 0,
+  "ambiguous": 0,
+  "uids": [
+    "a905e358-060a-4e8e-b1d3-304b4cbb2947"
+  ],
+  "note": "API calls and field mutations are counted SEPARATELY. A dry run writes nothing. A field mutation is a persisted write that changed data.value from the previous persisted value (resourceVersion order). opportunities = reconciliations requested inside the window; the counts cover the whole window, including the reconciliation triggered by resuming."
+}

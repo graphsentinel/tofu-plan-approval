@@ -1,0 +1,23 @@
+[0m[1mkubernetes_config_map.t27: Refreshing state... [id=t27/t27][0m
+
+OpenTofu used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [33m~[0m update in-place (current -> planned)[0m
+
+OpenTofu will perform the following actions:
+
+[1m  # kubernetes_config_map.t27[0m will be updated in-place
+[0m  [33m~[0m[0m resource "kubernetes_config_map" "t27" {
+      [33m~[0m[0m data        = {
+          [33m~[0m[0m "value" = "A" [33m->[0m[0m "B"
+        }
+        id          = "t27/t27"
+        [90m# (2 unchanged attributes hidden)[0m[0m
+
+        [90m# (1 unchanged block hidden)[0m[0m
+    }
+
+[1mPlan:[0m 0 to add, 1 to change, 0 to destroy.
+[0m
+Changes to Outputs:
+  [33m~[0m[0m value = "A" [33m->[0m[0m "B"

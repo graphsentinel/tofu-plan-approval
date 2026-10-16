@@ -1,8 +1,0 @@
-{
-  "approver": "ubuntu",
-  "approved_at": "2026-10-13T04:46:11Z",
-  "binding_kind": "plan_artifact",
-  "binding_value": "reviewed.tfplan",
-  "reviewed_plan_sha256": "04329248291829f8debe770115568b315d91b9aee2d5093b32d7c7ee2ea7b1f3",
-  "note": "the approver identity is NOT verified just because the file names it"
-}

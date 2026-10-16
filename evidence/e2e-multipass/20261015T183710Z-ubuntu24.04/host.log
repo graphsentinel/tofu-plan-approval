@@ -1,0 +1,27 @@
+
+==> launch tpa-e2e-2404: Ubuntu 24.04, 4 CPU, 8G, 30G
+
+==> copy source: committed tree bc5afb68ab490be1522ba4c5a6976134f436eeba
+
+==> scripts/platform.sh install && scripts/platform.sh cluster-up
+01-platform-install-cluster-up: exit 0, 114 s
+
+==> RUNS=1 scripts/lab.sh all
+02-lab-all: exit 0, 462 s
+raw runs: raw-runs-main.tar.gz
+
+==> scripts/lab.sh install && scripts/lab.sh reinstall && scripts/lab.sh status
+03-lab-install-reinstall: exit 0, 99 s
+
+==> RUNS=1 scripts/lab.sh test
+04-lab-test-after-reinstall: exit 0, 366 s
+raw runs: raw-runs-after-reinstall.tar.gz
+
+==> scripts/lab.sh install && scripts/lab.sh uninstall
+05-lab-install-uninstall: exit 0, 89 s
+
+==> scripts/platform.sh cluster-down && scripts/platform.sh status
+06-platform-cluster-down: exit 0, 4 s
+
+==> fetch results
+result: exit 0

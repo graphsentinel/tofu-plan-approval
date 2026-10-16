@@ -1,1 +1,0 @@
-kubectl --kubeconfig /home/ubuntu/lab/runs/20261013T044514Z/kubeconfig.second-writer -n t27 patch configmap t27 --type=merge -p {"data":{"value":"C"}}
